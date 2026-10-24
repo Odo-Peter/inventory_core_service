@@ -61,11 +61,11 @@
 - [x] Initialize NestJS with TypeScript.
 - [x] Configure linting, formatting, strict type checking, and unit tests.
 - [x] Validate environment configuration at application startup.
-- [ ] Configure structured backend logging.
-- [ ] Add request/correlation IDs.
-- [ ] Add application and database health checks.
-- [ ] Configure PostgreSQL connectivity and Prisma.
-- [ ] Establish a dedicated database migration workflow.
+- [x] Configure structured backend logging.
+- [x] Add request/correlation IDs.
+- [x] Add application and database health checks.
+- [x] Configure PostgreSQL connectivity and Prisma.
+- [x] Establish a dedicated database migration workflow.
 
 ### Frontend
 
