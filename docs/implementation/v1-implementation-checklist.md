@@ -60,7 +60,7 @@
 
 - [x] Initialize NestJS with TypeScript.
 - [x] Configure linting, formatting, strict type checking, and unit tests.
-- [ ] Validate environment configuration at application startup.
+- [x] Validate environment configuration at application startup.
 - [ ] Configure structured backend logging.
 - [ ] Add request/correlation IDs.
 - [ ] Add application and database health checks.
