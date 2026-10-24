@@ -29,9 +29,10 @@ const isProduction = process.env.NODE_ENV === 'production';
             typeof incoming === 'string' &&
             /^[a-zA-Z0-9._-]{1,128}$/.test(incoming)
               ? incoming
-              : crypto.randomUUID();
+              : randomUUID();
 
-          res.setHeader('x-request-id', requestId);
+          res.setHeader('X-Request-ID', requestId);
+
           return requestId;
         },
 

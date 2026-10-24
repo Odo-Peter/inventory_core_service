@@ -3,7 +3,8 @@
 .PHONY: help install build start dev debug prod \
         lint format test test-watch test-cov test-e2e test-debug \
         deploy clean \
-        up down logs ps db-shell restart
+        up down logs ps db-shell restart \
+        db-generate db-migrate-dev db-migrate-deploy db-migrate-status db-migrate
 
 # Default target
 help:
@@ -35,6 +36,13 @@ help:
 	@echo "  make logs          Follow infrastructure logs"
 	@echo "  make ps            Show running containers"
 	@echo "  make db-shell      Open psql shell in the database"
+	@echo ""
+	@echo "Prisma / Migrations"
+	@echo "  make db-generate              Generate Prisma Client"
+	@echo "  make db-migrate-dev           Run migrate dev (interactive)"
+	@echo "  make db-migrate name=foo      Create a named migration (migrate dev --name)"
+	@echo "  make db-migrate-deploy        Apply migrations (production)"
+	@echo "  make db-migrate-status        Show migration status"
 	@echo ""
 	@echo "Other"
 	@echo "  make deploy        Deploy the application"
@@ -112,6 +120,31 @@ ps:
 
 db-shell:
 	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+
+# ======================
+# Prisma / Migrations
+# ======================
+db-generate:
+	npm run db:generate
+
+# Interactive / default migrate dev (Prisma will prompt for a name if needed)
+db-migrate-dev:
+	npm run db:migrate:dev
+
+# Create a named migration locally
+# Usage: make db-migrate name=add_inventory_location
+db-migrate:
+	@if [ -z "$(name)" ]; then \
+		echo "Error: migration name is required. Usage: make db-migrate name=add_inventory_location"; \
+		exit 1; \
+	fi
+	npx prisma migrate dev --name $(name)
+
+db-migrate-deploy:
+	npm run db:migrate:deploy
+
+db-migrate-status:
+	npm run db:migrate:status
 
 # ======================
 # Deploy & Cleanup

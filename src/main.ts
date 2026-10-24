@@ -1,10 +1,13 @@
-import { randomUUID } from 'node:crypto';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
+
 import helmet from 'helmet';
 
 import { AppModule } from './app.module.js';
+
+import { config } from 'dotenv';
+config();
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
