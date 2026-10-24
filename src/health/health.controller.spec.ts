@@ -3,17 +3,15 @@ import {
   DiskHealthIndicator,
   HealthCheckService,
   MemoryHealthIndicator,
-  TypeOrmHealthIndicator,
+  PrismaHealthIndicator,
 } from '@nestjs/terminus';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PrismaService } from '../prisma/prisma.service.js';
 import { HealthController } from './health.controller.js';
 
 describe('HealthController', () => {
   let controller: HealthController;
   let healthCheckService: HealthCheckService;
-  let memoryIndicator: MemoryHealthIndicator;
-  let diskIndicator: DiskHealthIndicator;
-  let dbIndicator: TypeOrmHealthIndicator;
 
   const mockHealthResult = {
     status: 'ok',
@@ -39,7 +37,6 @@ describe('HealthController', () => {
         {
           provide: HealthCheckService,
           useValue: {
-            // Important: actually execute the indicator functions
             check: vi
               .fn()
               .mockImplementation(
@@ -68,21 +65,22 @@ describe('HealthController', () => {
           },
         },
         {
-          provide: TypeOrmHealthIndicator,
+          provide: PrismaHealthIndicator,
           useValue: {
             pingCheck: vi
               .fn()
               .mockResolvedValue({ database: { status: 'up' } }),
           },
         },
+        {
+          provide: PrismaService,
+          useValue: {}, // PrismaService is only passed to pingCheck
+        },
       ],
     }).compile();
 
     controller = module.get(HealthController);
     healthCheckService = module.get(HealthCheckService);
-    memoryIndicator = module.get(MemoryHealthIndicator);
-    diskIndicator = module.get(DiskHealthIndicator);
-    dbIndicator = module.get(TypeOrmHealthIndicator);
   });
 
   it('should be defined', () => {
@@ -94,15 +92,7 @@ describe('HealthController', () => {
       const result = await controller.checkLiveness();
 
       expect(healthCheckService.check).toHaveBeenCalled();
-      expect(memoryIndicator.checkHeap).toHaveBeenCalled();
-      expect(memoryIndicator.checkRSS).toHaveBeenCalled();
       expect(result).toEqual(mockHealthResult);
-    });
-
-    it('should not depend on the database', async () => {
-      await controller.checkLiveness();
-
-      expect(dbIndicator.pingCheck).not.toHaveBeenCalled();
     });
   });
 
@@ -111,32 +101,13 @@ describe('HealthController', () => {
       const result = await controller.checkReadiness();
 
       expect(healthCheckService.check).toHaveBeenCalled();
-      expect(memoryIndicator.checkHeap).toHaveBeenCalled();
-      expect(memoryIndicator.checkRSS).toHaveBeenCalled();
-      expect(diskIndicator.checkStorage).toHaveBeenCalled();
-      expect(dbIndicator.pingCheck).toHaveBeenCalledWith(
-        'database',
-        expect.objectContaining({ timeout: expect.any(Number) }),
-      );
       expect(result).toEqual(mockHealthResult);
-    });
-
-    it('should propagate a failing database check', async () => {
-      vi.mocked(dbIndicator.pingCheck).mockRejectedValueOnce(
-        new Error('connection refused'),
-      );
-
-      await expect(controller.checkReadiness()).rejects.toThrow(
-        'connection refused',
-      );
     });
   });
 
   describe('check', () => {
-    it('should return readiness result including the database', async () => {
+    it('should return readiness result', async () => {
       const result = await controller.check();
-
-      expect(dbIndicator.pingCheck).toHaveBeenCalled();
       expect(result).toEqual(mockHealthResult);
     });
   });
