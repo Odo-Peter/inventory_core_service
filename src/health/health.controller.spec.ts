@@ -3,8 +3,10 @@ import {
   DiskHealthIndicator,
   HealthCheckService,
   MemoryHealthIndicator,
+  PrismaHealthIndicator,
 } from '@nestjs/terminus';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PrismaService } from '../prisma/prisma.service.js';
 import { HealthController } from './health.controller.js';
 
 describe('HealthController', () => {
@@ -17,12 +19,14 @@ describe('HealthController', () => {
       memory_heap: { status: 'up' },
       memory_rss: { status: 'up' },
       disk: { status: 'up' },
+      database: { status: 'up' },
     },
     error: {},
     details: {
       memory_heap: { status: 'up' },
       memory_rss: { status: 'up' },
       disk: { status: 'up' },
+      database: { status: 'up' },
     },
   };
 
@@ -33,7 +37,6 @@ describe('HealthController', () => {
         {
           provide: HealthCheckService,
           useValue: {
-            // Important: actually execute the indicator functions
             check: vi
               .fn()
               .mockImplementation(
@@ -61,6 +64,18 @@ describe('HealthController', () => {
             checkStorage: vi.fn().mockResolvedValue({ disk: { status: 'up' } }),
           },
         },
+        {
+          provide: PrismaHealthIndicator,
+          useValue: {
+            pingCheck: vi
+              .fn()
+              .mockResolvedValue({ database: { status: 'up' } }),
+          },
+        },
+        {
+          provide: PrismaService,
+          useValue: {}, // PrismaService is only passed to pingCheck
+        },
       ],
     }).compile();
 
@@ -82,7 +97,7 @@ describe('HealthController', () => {
   });
 
   describe('checkReadiness', () => {
-    it('should call memory and disk health indicators', async () => {
+    it('should call memory, disk and database health indicators', async () => {
       const result = await controller.checkReadiness();
 
       expect(healthCheckService.check).toHaveBeenCalled();

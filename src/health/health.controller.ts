@@ -4,7 +4,10 @@ import {
   HealthCheck,
   HealthCheckService,
   MemoryHealthIndicator,
+  PrismaHealthIndicator,
 } from '@nestjs/terminus';
+
+import { PrismaService } from '../prisma/prisma.service.js';
 
 @Controller('health')
 export class HealthController {
@@ -12,11 +15,12 @@ export class HealthController {
     private readonly health: HealthCheckService,
     private readonly memory: MemoryHealthIndicator,
     private readonly disk: DiskHealthIndicator,
+    private readonly prismaHealth: PrismaHealthIndicator,
+    private readonly prisma: PrismaService,
   ) {}
 
   /**
-   * Liveness probe – is the process alive?
-   * Used by Kubernetes / orchestrators for restart decisions.
+   * Liveness probe – process is alive
    */
   @Get('live')
   @HealthCheck()
@@ -28,8 +32,7 @@ export class HealthController {
   }
 
   /**
-   * Readiness probe – is the application ready to receive traffic?
-   * Add database, cache, external services here later.
+   * Readiness probe – app is ready to accept traffic (includes DB)
    */
   @Get('ready')
   @HealthCheck()
@@ -39,15 +42,14 @@ export class HealthController {
       () =>
         this.disk.checkStorage('disk', {
           path: '/',
-          thresholdPercent: 0.9, // 90% usage
+          thresholdPercent: 0.9,
         }),
-      // Example for later:
-      // () => this.db.pingCheck('database'),
+      () => this.prismaHealth.pingCheck('database', this.prisma),
     ]);
   }
 
   /**
-   * General health endpoint (commonly used by monitoring tools)
+   * General health endpoint
    */
   @Get()
   @HealthCheck()
