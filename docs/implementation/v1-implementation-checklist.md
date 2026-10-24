@@ -46,9 +46,9 @@
 - [x] Decide whether architecture documentation lives in a third repository or initially in the backend repository.
 - [x] Place ADRs under `docs/architecture/`.
 - [x] Create `docs/implementation/v1-implementation-checklist.md`.
-- [ ] Protect main branches and require pull-request review.
-- [ ] Add `.env.example` files containing placeholders only.
-- [ ] Agree on linting, formatting, TypeScript strictness, and pull-request checks.
+- [x] Protect main branches and require pull-request review.
+- [x] Add `.env.example` files containing placeholders only.
+- [x] Agree on linting, formatting, TypeScript strictness, and pull-request checks.
 
 **Exit criteria:** implementation-blocking decisions are resolved, and repository ownership and development conventions are documented.
 
@@ -59,7 +59,7 @@
 ### Backend
 
 - [x] Initialize NestJS with TypeScript.
-- [ ] Configure linting, formatting, strict type checking, and unit tests.
+- [x] Configure linting, formatting, strict type checking, and unit tests.
 - [ ] Validate environment configuration at application startup.
 - [ ] Configure structured backend logging.
 - [ ] Add request/correlation IDs.
