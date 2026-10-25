@@ -163,7 +163,7 @@ async function main(): Promise<void> {
 
   try {
     await runSeed(prisma, process.env);
-    console.log('Seed complete.');
+    console.log('Seed complete for admin user 🎉🎊');
   } finally {
     await prisma.$disconnect();
     await pool.end();
