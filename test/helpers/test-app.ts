@@ -15,14 +15,10 @@ import {
   loginAs,
   type CreateStaffOptions,
 } from '../factories/staff.factory.js';
+import { PrismaClient } from '../../src/generated/prisma/client.js';
+import { assertTestDatabase } from '../setup/assert-test-db.js';
 
-export {
-  authHeader,
-  createStaff,
-  login,
-  loginAs,
-  type CreateStaffOptions,
-};
+export { authHeader, createStaff, login, loginAs, type CreateStaffOptions };
 export const bearer = authHeader;
 
 export class FakeClock implements Clock {
@@ -96,10 +92,17 @@ export async function createTestApp(
   };
 }
 
-export async function truncateAll(prisma: PrismaService): Promise<void> {
-  await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE "AuditLog", "Shift", "Staff", "Store" CASCADE',
-  );
+export async function truncateAll(prisma: PrismaClient): Promise<void> {
+  assertTestDatabase(process.env.DATABASE_URL);
+
+  // Table names come from the catalog, so new models are covered automatically.
+  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
+  if (tables.length === 0) return;
+
+  const list = tables.map((t) => `"${t.tablename}"`).join(', ');
+  await prisma.$executeRawUnsafe(`TRUNCATE ${list} CASCADE`);
 }
 
 export async function createStore(
@@ -152,4 +155,3 @@ export function findSecretKeys(value: unknown, path = '$'): string[] {
 export function expectNoSecrets(value: unknown): void {
   expect(findSecretKeys(value)).toEqual([]);
 }
-
