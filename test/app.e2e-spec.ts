@@ -1,29 +1,45 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { App } from 'supertest/types.js';
-import { AppModule } from './../src/app.module.js';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-describe('AppController (e2e)', () => {
-  let app: INestApplication<App>;
+import { createTestApp, type TestContext } from './helpers/test-app.js';
 
-  beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+describe('Application bootstrap (e2e)', () => {
+  let context: TestContext;
 
-    app = moduleFixture.createNestApplication();
-    await app.init();
+  beforeAll(async () => {
+    context = await createTestApp();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello Inventory!!');
+  afterAll(async () => {
+    await context.app.close();
   });
 
-  afterEach(async () => {
-    await app.close();
+  it('serves the versioned root route publicly', async () => {
+    const response = await request(context.app.getHttpServer())
+      .get('/api/v1')
+      .expect(200);
+
+    expect(response.text).toBe('Hello Inventory!');
+  });
+
+  it('serves health without authentication', async () => {
+    await request(context.app.getHttpServer()).get('/health/live').expect(200);
+  });
+
+  it('publishes Swagger with bearer authentication', async () => {
+    const response = await request(context.app.getHttpServer())
+      .get('/docs-json')
+      .expect(200);
+
+    expect(response.body.components.securitySchemes).toHaveProperty('bearer');
+    expect(response.body.info.title).toBe(
+      'Stocktake store Inventory & POS API',
+    );
+  });
+
+  it('returns 404 for unknown routes', async () => {
+    await request(context.app.getHttpServer())
+      .get('/api/v1/unknown')
+      .expect(404);
   });
 });

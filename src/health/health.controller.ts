@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, VERSION_NEUTRAL, Version } from '@nestjs/common';
 import {
   DiskHealthIndicator,
   HealthCheck,
@@ -8,7 +8,9 @@ import {
 } from '@nestjs/terminus';
 
 import { PrismaService } from '../prisma/prisma.service.js';
+import { Public } from '../modules/auth/decorators/public.decorator.js';
 
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(
@@ -23,6 +25,7 @@ export class HealthController {
    * Liveness probe – process is alive
    */
   @Get('live')
+  @Version(VERSION_NEUTRAL)
   @HealthCheck()
   checkLiveness() {
     return this.health.check([
@@ -35,6 +38,7 @@ export class HealthController {
    * Readiness probe – app is ready to accept traffic (includes DB)
    */
   @Get('ready')
+  @Version(VERSION_NEUTRAL)
   @HealthCheck()
   checkReadiness() {
     return this.health.check([
@@ -52,6 +56,7 @@ export class HealthController {
    * General health endpoint
    */
   @Get()
+  @Version(VERSION_NEUTRAL)
   @HealthCheck()
   check() {
     return this.checkReadiness();
