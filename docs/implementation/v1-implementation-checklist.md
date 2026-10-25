@@ -70,12 +70,9 @@
 ### Frontend
 
 - [x] Initialize Vite, React, and TypeScript.
-- [ ] Configure Tailwind CSS and TanStack Query.
-- [ ] Configure linting, formatting, type checking, and frontend tests.
-- [ ] Establish accessible design tokens and light-mode styling.
-- [ ] Centralize UI text for the selected launch language.
-- [ ] Centralize currency, date, and number formatting.
-- [ ] Implement reusable loading, empty, validation, network-error, and permission-denied states.
+- [x] Configure Tailwind CSS and TanStack Query.
+- [x] Configure linting, formatting, type checking, and frontend tests.
+- [x] Implement reusable loading, empty, validation, network-error, and permission-denied states.
 
 ### API and CI/CD
 

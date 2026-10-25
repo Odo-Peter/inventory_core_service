@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,104 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum StaffRole {
+  cashier
+  manager
+  admin
+}
+
+enum ShiftCloseReason {
+  normal
+  forced
+  handover
+}
+
+model Store {
+  id             String  @id @default(uuid()) @db.Uuid
+  name           String
+  address        String?
+  phone          String?
+  currency       String
+  timezone       String
+  receipt_footer String?
+  active         Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  staff      Staff[]
+  shifts     Shift[]
+  audit_logs AuditLog[]
+}
+
+model Staff {
+  id                  String    @id @default(uuid()) @db.Uuid
+  store_id            String    @db.Uuid
+  staff_code          String
+  first_name          String
+  last_name           String
+  phone               String
+  pin_hash            String
+  role                StaffRole @default(cashier)
+  active              Boolean   @default(true)
+  failed_pin_attempts Int       @default(0)
+  locked_until        DateTime?
+  token_version       Int       @default(0)
+  must_change_pin     Boolean   @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  store         Store      @relation(fields: [store_id], references: [id])
+  shifts        Shift[]    @relation("ShiftStaff")
+  shifts_closed Shift[]    @relation("ShiftClosedBy")
+  audit_logs    AuditLog[]
+
+  @@unique([store_id, staff_code])
+  @@index([store_id, active])
+}
+
+model Shift {
+  id                   String            @id @default(uuid()) @db.Uuid
+  store_id             String            @db.Uuid
+  staff_id             String            @db.Uuid
+  clock_in_at          DateTime          @default(now())
+  clock_out_at         DateTime?
+  opening_float        Int               @default(0)
+  closing_cash_counted Int?
+  opening_notes        String?
+  closing_notes        String?
+  closed_by_staff_id   String?           @db.Uuid
+  close_reason         ShiftCloseReason?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  store     Store  @relation(fields: [store_id], references: [id])
+  staff     Staff  @relation("ShiftStaff", fields: [staff_id], references: [id])
+  closed_by Staff? @relation("ShiftClosedBy", fields: [closed_by_staff_id], references: [id])
+
+  @@index([store_id, clock_in_at])
+  @@index([staff_id, clock_out_at])
+  @@index([closed_by_staff_id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  store_id    String   @db.Uuid
+  staff_id    String?  @db.Uuid
+  action      String
+  entity_type String
+  entity_id   String?  @db.Uuid
+  details     Json?
+  created_at  DateTime @default(now())
+
+  store Store  @relation(fields: [store_id], references: [id])
+  staff Staff? @relation(fields: [staff_id], references: [id])
+
+  @@index([store_id, created_at])
+  @@index([store_id, entity_type, entity_id])
+  @@index([store_id, staff_id, created_at])
 }

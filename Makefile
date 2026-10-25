@@ -43,6 +43,7 @@ help:
 	@echo "  make db-migrate name=foo      Create a named migration (migrate dev --name)"
 	@echo "  make db-migrate-deploy        Apply migrations (production)"
 	@echo "  make db-migrate-status        Show migration status"
+	@echo "  make db-seed                     Seed admin details from .env"
 	@echo ""
 	@echo "Other"
 	@echo "  make deploy        Deploy the application"
@@ -119,7 +120,7 @@ ps:
 	docker compose ps
 
 db-shell:
-	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 # ======================
 # Prisma / Migrations
@@ -145,6 +146,9 @@ db-migrate-deploy:
 
 db-migrate-status:
 	npm run db:migrate:status
+
+db-seed:
+	npm run db:seed
 
 # ======================
 # Deploy & Cleanup
