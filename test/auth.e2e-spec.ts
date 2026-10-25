@@ -384,9 +384,7 @@ describe('Authentication (e2e)', () => {
     });
 
     try {
-      await throttled.prisma.$executeRawUnsafe(
-        'TRUNCATE TABLE "AuditLog", "Shift", "Staff", "Store" CASCADE',
-      );
+      await truncateAll(throttled.prisma);
       await createStore(throttled.prisma);
 
       await login(throttled.app, 'ONE', '246810').expect(401);
@@ -404,9 +402,7 @@ describe('Authentication (e2e)', () => {
     });
 
     try {
-      await throttled.prisma.$executeRawUnsafe(
-        'TRUNCATE TABLE "AuditLog", "Shift", "Staff", "Store" CASCADE',
-      );
+      await truncateAll(throttled.prisma);
       const store = await createStore(throttled.prisma);
       await createStaff(
         { prisma: throttled.prisma, pinHasher: throttled.pinHasher },

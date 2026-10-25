@@ -2,9 +2,17 @@
 
 .PHONY: help install build start dev debug prod \
         lint format test test-watch test-cov test-e2e test-debug \
+        test-db-up test-db-create test-db-reset test-db-drop test-env-check \
         deploy clean \
         up down logs ps db-shell restart \
-        db-generate db-migrate-dev db-migrate-deploy db-migrate-status db-migrate
+        db-generate db-migrate-dev db-migrate-deploy db-migrate-status db-migrate db-seed
+
+TEST_DB := pos_test
+
+# Refuse to run at all if TEST_DB is not a *_test name (the drop below is destructive).
+ifneq ($(filter %_test,$(TEST_DB)),$(TEST_DB))
+$(error TEST_DB must end with _test, got "$(TEST_DB)")
+endif
 
 # Default target
 help:
@@ -26,8 +34,9 @@ help:
 	@echo "  make test          Run unit tests"
 	@echo "  make test-watch    Run unit tests in watch mode"
 	@echo "  make test-cov      Run unit tests with coverage"
-	@echo "  make test-e2e      Run end-to-end tests"
-	@echo "  make test-debug    Run tests in debug mode"
+	@echo "  make test-e2e      E2E in one go: start DB, create+reset test DB, run, drop on success"
+	@echo "                     (KEEP_DB=1 keeps the test DB after a passing run)"
+	@echo "  make test-db-create / test-db-reset / test-db-drop   Manage the test DB individually"
 	@echo ""
 	@echo "Docker / Database"
 	@echo "  make up            Start infrastructure (Postgres)"
@@ -94,11 +103,45 @@ test-watch:
 test-cov:
 	npm run test:cov
 
-test-e2e:
-	npm run test:e2e
-
 test-debug:
 	npm run test:debug
+
+# One command: start DB -> create test DB -> reset + migrate -> run e2e -> drop test DB (only on success).
+# Keep the DB after a passing run:  make test-e2e KEEP_DB=1
+test-e2e:
+	@$(MAKE) --no-print-directory test-env-check
+	@$(MAKE) --no-print-directory test-db-up
+	@$(MAKE) --no-print-directory test-db-create
+	@$(MAKE) --no-print-directory test-db-reset
+	npm run test:e2e
+	@if [ -z "$(KEEP_DB)" ]; then \
+		$(MAKE) --no-print-directory test-db-drop; \
+	else \
+		echo "KEEP_DB set: leaving $(TEST_DB) in place"; \
+	fi
+
+# .env.test must point at exactly this test database.
+test-env-check:
+	@grep -Eq '^DATABASE_URL=.*/$(TEST_DB)(\?.*)?$$' .env.test || \
+		(echo "DATABASE_URL in .env.test must end with /$(TEST_DB)"; exit 1)
+
+# Start Postgres and wait until its healthcheck passes.
+test-db-up:
+	docker compose up -d --wait db
+
+# Create the test database if it does not exist (silent when it already does).
+test-db-create:
+	@printf '%s\n' "SELECT 'CREATE DATABASE $(TEST_DB)' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$(TEST_DB)')\gexec" \
+		| docker compose exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1'
+
+# Drop everything in the test DB, re-apply all migrations, regenerate the client.
+test-db-reset: test-env-check
+	set -a && . ./.env.test && set +a && npx prisma migrate reset --force && npx prisma generate
+
+# Remove the test database entirely (never touches the dev database).
+test-db-drop: test-env-check
+	docker compose exec -T db sh -c 'psql -U "$$POSTGRES_USER" -d postgres -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS $(TEST_DB) WITH (FORCE)"'
+
 
 # ======================
 # Docker Compose (Postgres)
