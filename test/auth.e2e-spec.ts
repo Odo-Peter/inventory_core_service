@@ -32,7 +32,8 @@ describe('Authentication (e2e)', () => {
     storeId = (await createStore(context.prisma)).id;
     await createStaff(context, storeId, {
       staffCode: 'ADMIN001',
-      name: 'Admin',
+      first_name: 'Admin',
+      last_name: 'Staff',
       role: 'admin',
     });
   });

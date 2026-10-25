@@ -111,7 +111,9 @@ export async function createStore(
 
 export interface CreateStaffOptions {
   staffCode: string;
-  name?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
   role?: StaffRole;
   pin?: string;
   active?: boolean;
@@ -130,7 +132,9 @@ export async function createStaff(
     data: {
       store_id: storeId,
       staff_code: options.staffCode,
-      name: options.name ?? options.staffCode,
+      first_name: options.first_name ?? 'Test',
+      last_name: options.last_name ?? 'Staff',
+      phone: options.phone ?? '08031234567',
       role: options.role ?? 'cashier',
       pin_hash: pinHash,
       active: options.active ?? true,

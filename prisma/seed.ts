@@ -3,7 +3,7 @@ import { hash } from 'argon2';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-import { PrismaClient } from '../src/generated/prisma/client.js';
+import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
 import { PIN_HASH_OPTIONS } from '../src/modules/auth/pin-hashing.constants.js';
 import { applyPinPepper } from '../src/modules/auth/pin-pepper.js';
 import { isPinFormatValid, isWeakPin } from '../src/modules/auth/pin-policy.js';
@@ -31,7 +31,9 @@ async function main(): Promise<void> {
   const currency = requireEnv('SEED_STORE_CURRENCY');
   const timeZone = requireEnv('SEED_STORE_TIMEZONE');
   const adminCode = requireEnv('SEED_ADMIN_CODE');
-  const adminName = requireEnv('SEED_ADMIN_NAME');
+  const adminFirstName = requireEnv('SEED_ADMIN_FIRST_NAME');
+  const adminLastName = requireEnv('SEED_ADMIN_LAST_NAME');
+  const adminPhone = requireEnv('SEED_ADMIN_LAST_NAME');
   const adminPin = requireEnv('SEED_ADMIN_PIN');
   const pinPepper = requireEnv('PIN_PEPPER');
 
@@ -111,21 +113,25 @@ async function main(): Promise<void> {
         create: {
           store_id: store.id,
           staff_code: adminCode,
-          name: adminName,
+          first_name: adminFirstName,
+          last_name: adminLastName,
+          phone: adminPhone,
           pin_hash: pinHash,
           role: 'admin',
           active: true,
         },
       });
     } else {
-      const staffUpdate: {
-        name?: string;
-        role?: 'cashier' | 'manager' | 'admin';
-        active?: boolean;
-      } = {};
+      const staffUpdate: Prisma.StaffUpdateInput = {};
 
-      if (existingAdmin.name !== adminName) {
-        staffUpdate.name = adminName;
+      if (existingAdmin.first_name !== adminFirstName) {
+        staffUpdate.first_name = adminFirstName;
+      }
+      if (existingAdmin.last_name !== adminLastName) {
+        staffUpdate.last_name = adminLastName;
+      }
+      if (existingAdmin.phone !== adminPhone) {
+        staffUpdate.phone = adminPhone;
       }
       if (existingAdmin.role !== 'admin') {
         staffUpdate.role = 'admin';

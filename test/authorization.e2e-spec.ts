@@ -108,7 +108,8 @@ describe('Authorization (e2e)', () => {
     for (const role of ROLES) {
       await createStaff(context, storeId, {
         staffCode: role.toUpperCase(),
-        name: role,
+        first_name: `${role} firstname`,
+        last_name: `${role} lastname`,
         role,
       });
     }

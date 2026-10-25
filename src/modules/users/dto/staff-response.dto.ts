@@ -10,7 +10,13 @@ export class StaffResponseDto {
   staff_code: string;
 
   @ApiProperty()
-  name: string;
+  first_name: string;
+
+  @ApiProperty()
+  last_name: string;
+
+  @ApiProperty()
+  phone: string;
 
   @ApiProperty({ enum: ['cashier', 'manager', 'admin'] })
   role: StaffRole;

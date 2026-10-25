@@ -114,16 +114,17 @@ model AuditLog {
   @@index([store_id, staff_id, created_at])
 }
 ```
+
 ### Deviations from the build plan
 
-| Change                                                                       | Reason                                                                                      |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| Added `AuditLog.staff` relation to `Staff` (+ `Staff.audit_logs`)            | Build plan lists `staff_id` but no FK; the relation gives integrity. Column stays nullable. |
-| Added `@@index` entries                                                      | Query paths for login, open-shift lookup and audit browsing.                                |
-| Added `Staff.token_version` and `Staff.must_change_pin`                      | ADR 0004 token revocation and forced PIN change.                                            |
-| Added `Shift.closed_by_staff_id` (+ `closed_by`/`shifts_closed` relations)    | Force-close must record which manager/admin closed another staff member's shift.            |
-| Added `Shift.close_reason` / `ShiftCloseReason` (`normal`, `forced`, `handover`) | Distinguish normal clock-out from manager/admin resolution.                                |
-| Renamed the default role from `staff` to `cashier`                            | ADR 0004 role rename; `cashier` is the lowest role and default.                             |
+| Change                                                                           | Reason                                                                                      |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Added `AuditLog.staff` relation to `Staff` (+ `Staff.audit_logs`)                | Build plan lists `staff_id` but no FK; the relation gives integrity. Column stays nullable. |
+| Added `@@index` entries                                                          | Query paths for login, open-shift lookup and audit browsing.                                |
+| Added `Staff.token_version` and `Staff.must_change_pin`                          | ADR 0004 token revocation and forced PIN change.                                            |
+| Added `Shift.closed_by_staff_id` (+ `closed_by`/`shifts_closed` relations)       | Force-close must record which manager/admin closed another staff member's shift.            |
+| Added `Shift.close_reason` / `ShiftCloseReason` (`normal`, `forced`, `handover`) | Distinguish normal clock-out from manager/admin resolution.                                 |
+| Renamed the default role from `staff` to `cashier`                               | ADR 0004 role rename; `cashier` is the lowest role and default.                             |
 
 ## 2. Field rules
 
@@ -166,15 +167,15 @@ model AuditLog {
 
 Audit actions introduced in this phase:
 
-| Action                                                                                              | Entity | When                                                    |
-| --------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------- |
-| `auth.login_succeeded`                                                                              | Staff  | Successful PIN login                                    |
-| `auth.login_failed`                                                                                 | Staff  | Wrong PIN, wrong acting PIN, or unknown code (`entity_id` null if unknown) |
-| `auth.account_locked`                                                                               | Staff  | Lockout triggered (includes tier)                       |
-| `auth.unlocked` / `auth.pin_reset`                                                                  | Staff  | Manager/Admin unlock or PIN reset                       |
-| `auth.logout` / `auth.pin_changed` / `auth.tokens_revoked`                                          | Staff  | Session revocation / self-service PIN change             |
-| `staff.created` / `staff.updated` / `staff.role_changed` / `staff.deactivated` / `staff.reactivated` | Staff  | Admin staff management                                  |
-| `shift.clock_in` / `shift.clock_out` / `shift.force_closed`                                         | Shift  | Opening, normal closing or force-closing a shift        |
+| Action                                                                                               | Entity | When                                                                       |
+| ---------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
+| `auth.login_succeeded`                                                                               | Staff  | Successful PIN login                                                       |
+| `auth.login_failed`                                                                                  | Staff  | Wrong PIN, wrong acting PIN, or unknown code (`entity_id` null if unknown) |
+| `auth.account_locked`                                                                                | Staff  | Lockout triggered (includes tier)                                          |
+| `auth.unlocked` / `auth.pin_reset`                                                                   | Staff  | Manager/Admin unlock or PIN reset                                          |
+| `auth.logout` / `auth.pin_changed` / `auth.tokens_revoked`                                           | Staff  | Session revocation / self-service PIN change                               |
+| `staff.created` / `staff.updated` / `staff.role_changed` / `staff.deactivated` / `staff.reactivated` | Staff  | Admin staff management                                                     |
+| `shift.clock_in` / `shift.clock_out` / `shift.force_closed`                                          | Shift  | Opening, normal closing or force-closing a shift                           |
 
 ## 3. DB constraints and raw SQL
 
@@ -218,7 +219,7 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 ## 5. Seed data
 
 - One `Store` row from `SEED_STORE_NAME`, `SEED_STORE_CURRENCY` and `SEED_STORE_TIMEZONE` (placeholder values, e.g. currency `NGN`, timezone `Africa/Lagos`; confirm real values).
-- One initial `admin` Staff from `SEED_ADMIN_CODE`, `SEED_ADMIN_NAME` and `SEED_ADMIN_PIN`. The PIN is hashed with argon2id + `PIN_PEPPER` before insert and is never committed to the repo.
+- One initial `admin` Staff from `SEED_ADMIN_CODE`, `SEED_ADMIN_FIRST_NAME`, `SEED_ADMIN_LAST_NAME` and `SEED_ADMIN_PIN`. The PIN is hashed with argon2id + `PIN_PEPPER` before insert and is never committed to the repo.
 - The seed is idempotent: it updates the existing pilot store/admin metadata but never rewrites an existing PIN hash or `token_version`. It fails fast if the PIN is weak or the secrets are missing.
 - `prisma.config.ts` wires the seed command, so `npm run db:seed` is the supported entry point.
 

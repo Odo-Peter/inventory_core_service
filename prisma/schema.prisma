@@ -44,7 +44,9 @@ model Staff {
   id                  String    @id @default(uuid()) @db.Uuid
   store_id            String    @db.Uuid
   staff_code          String
-  name                String
+  first_name          String
+  last_name           String
+  phone               String
   pin_hash            String
   role                StaffRole @default(cashier)
   active              Boolean   @default(true)

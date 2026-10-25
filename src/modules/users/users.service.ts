@@ -15,6 +15,7 @@ import type { ActingPinDto } from './dto/acting-pin.dto.js';
 import type { CreateStaffDto } from './dto/create-staff.dto.js';
 import type { UpdateStaffDto } from './dto/update-staff.dto.js';
 import { toStaffResponse, type StaffResponse } from './staff.mapper.js';
+import { maskPhone } from './phone.js';
 
 export interface StaffWithTemporaryPin {
   staff: StaffResponse;
@@ -35,7 +36,7 @@ export class UsersService {
   async list(principal: Principal): Promise<StaffResponse[]> {
     const staff = await this.prisma.staff.findMany({
       where: { store_id: principal.store_id },
-      orderBy: { name: 'asc' },
+      orderBy: { first_name: 'asc' },
     });
     const now = this.clock.now();
 
@@ -61,7 +62,9 @@ export class UsersService {
           data: {
             store_id: principal.store_id,
             staff_code: dto.staff_code,
-            name: dto.name,
+            first_name: dto.first_name,
+            last_name: dto.last_name,
+            phone: dto.phone,
             role,
             pin_hash: pinHash,
             must_change_pin: true,
@@ -110,13 +113,25 @@ export class UsersService {
     const target = await this.getTarget(principal.store_id, staffId);
 
     const data: {
-      name?: string;
+      first_name?: string;
+      last_name?: string;
+      phone?: string;
       role?: StaffRoleValue;
       must_change_pin?: boolean;
     } = {};
+    const profileFields: string[] = [];
 
-    if (dto.name !== undefined && dto.name !== target.name) {
-      data.name = dto.name;
+    if (dto.first_name !== undefined && dto.first_name !== target.first_name) {
+      data.first_name = dto.first_name;
+      profileFields.push('first_name');
+    }
+    if (dto.last_name !== undefined && dto.last_name !== target.last_name) {
+      data.last_name = dto.last_name;
+      profileFields.push('last_name');
+    }
+    if (dto.phone !== undefined && dto.phone !== target.phone) {
+      data.phone = dto.phone; // already normalized to +234... by the DTO transform
+      profileFields.push('phone');
     }
     if (dto.role !== undefined && dto.role !== target.role) {
       data.role = dto.role;
@@ -142,7 +157,7 @@ export class UsersService {
         data,
       });
 
-      if (data.name !== undefined) {
+      if (profileFields.length > 0) {
         await this.audit.record(
           {
             store_id: principal.store_id,
@@ -150,7 +165,13 @@ export class UsersService {
             action: AUDIT_ACTIONS.staffUpdated,
             entity_type: 'Staff',
             entity_id: staff.id,
-            details: { field: 'name' },
+            details: {
+              fields: profileFields,
+              ...(data.phone !== undefined && {
+                phone_from: maskPhone(target.phone),
+                phone_to: maskPhone(staff.phone),
+              }),
+            },
           },
           tx,
         );
@@ -164,10 +185,7 @@ export class UsersService {
             action: AUDIT_ACTIONS.staffRoleChanged,
             entity_type: 'Staff',
             entity_id: staff.id,
-            details: {
-              from_role: target.role,
-              to_role: staff.role,
-            },
+            details: { from_role: target.role, to_role: staff.role },
           },
           tx,
         );
@@ -178,7 +196,6 @@ export class UsersService {
 
     return toStaffResponse(updated, this.clock.now());
   }
-
   async deactivate(
     principal: Principal,
     staffId: string,

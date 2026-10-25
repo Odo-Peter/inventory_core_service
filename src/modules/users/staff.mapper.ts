@@ -1,10 +1,12 @@
-import type { StaffModel } from '../../generated/prisma/models.js';
 import type { StaffRole } from '../../generated/prisma/enums.js';
+import { StaffModel } from '../../generated/prisma/models.js';
 
 export interface StaffResponse {
   id: string;
   staff_code: string;
-  name: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
   role: StaffRole;
   active: boolean;
   store_id: string;
@@ -21,7 +23,9 @@ export function toStaffResponse(
   return {
     id: staff.id,
     staff_code: staff.staff_code,
-    name: staff.name,
+    first_name: staff.first_name,
+    last_name: staff.last_name,
+    phone: staff.phone,
     role: staff.role,
     active: staff.active,
     store_id: staff.store_id,

@@ -119,7 +119,7 @@ ps:
 	docker compose ps
 
 db-shell:
-	docker compose exec db psql -U $${POSTGRES_USER} -d $${POSTGRES_DB}
+	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 # ======================
 # Prisma / Migrations
