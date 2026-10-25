@@ -22,6 +22,25 @@ const isProduction = process.env.NODE_ENV === 'production';
       pinoHttp: {
         level: process.env.LOG_LEVEL ?? (isProduction ? 'info' : 'debug'),
 
+        // Make status codes stand out
+        customLogLevel: (req, res, err) => {
+          if (res.statusCode >= 500 || err) {
+            return 'error';
+          }
+          if (res.statusCode >= 400) {
+            return 'warn';
+          }
+          return 'info';
+        },
+
+        // Clearer log messages
+        customSuccessMessage: (req, res) => {
+          return `${req.method} ${req.url} → ${res.statusCode}`;
+        },
+        customErrorMessage: (req, res, err) => {
+          return `${req.method} ${req.url} → ${res.statusCode}${err?.message ? ` ${err.message}` : ''}`;
+        },
+
         genReqId: (req, res) => {
           const incoming = req.headers['x-request-id'];
 
@@ -57,6 +76,12 @@ const isProduction = process.env.NODE_ENV === 'production';
             url: req.url?.split('?')[0],
             remoteAddress: req.remoteAddress,
           }),
+        },
+
+        // Optional: skip noisy health checks
+        autoLogging: {
+          ignore: (req) =>
+            req.url === '/health' || req.url?.startsWith('/health') === true,
         },
 
         ...(!isProduction
