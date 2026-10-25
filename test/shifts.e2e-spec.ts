@@ -292,6 +292,33 @@ describe('Shifts (e2e)', () => {
       });
   });
 
+  it('keeps shift staff links backed by refactored first and last names', async () => {
+    const opened = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(cashierToken))
+      .send({ opening_float: 0 })
+      .expect(201);
+
+    const list = await request(context.app.getHttpServer())
+      .get(`/api/v1/shifts?staff_id=${cashierId}`)
+      .set(bearer(managerToken))
+      .expect(200);
+
+    expect(list.body.data[0].id).toBe(opened.body.id);
+    expect(list.body.data[0].staff_id).toBe(cashierId);
+
+    const embedded = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: opened.body.id as string },
+      include: {
+        staff: { select: { first_name: true, last_name: true } },
+      },
+    });
+    expect(embedded.staff).toEqual({
+      first_name: 'Test',
+      last_name: 'Staff',
+    });
+  });
+
   it('applies date filters in the store timezone', async () => {
     const shifts = [
       '2026-10-24T23:30:00.000Z',

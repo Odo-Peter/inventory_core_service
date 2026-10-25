@@ -74,7 +74,9 @@ const ROLE_CASES: RoleCase[] = [
     path: () => '/api/v1/staff',
     body: (role) => ({
       staff_code: `NEW_${role.toUpperCase()}`,
-      name: `New ${role}`,
+      first_name: 'New',
+      last_name: role,
+      phone: '08031234567',
       role: 'cashier',
     }),
     expected: { cashier: 403, manager: 403, admin: 201 },
@@ -207,7 +209,12 @@ describe('Authorization (e2e)', () => {
     await request(context.app.getHttpServer())
       .post('/api/v1/staff')
       .set(bearer(tokens.admin))
-      .send({ staff_code: 'AFTER_DEMOTION', name: 'Nope' })
+      .send({
+        staff_code: 'AFTER_DEMOTION',
+        first_name: 'Nope',
+        last_name: 'Staff',
+        phone: '08031234567',
+      })
       .expect(403);
   });
 

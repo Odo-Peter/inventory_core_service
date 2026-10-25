@@ -7,6 +7,9 @@ export class StaffResponseDto {
   id: string;
 
   @ApiProperty()
+  store_id: string;
+
+  @ApiProperty()
   staff_code: string;
 
   @ApiProperty()
@@ -18,14 +21,17 @@ export class StaffResponseDto {
   @ApiProperty()
   phone: string;
 
+  @ApiProperty({
+    readOnly: true,
+    description: 'Computed from first_name and last_name.',
+  })
+  name: string;
+
   @ApiProperty({ enum: ['cashier', 'manager', 'admin'] })
   role: StaffRole;
 
   @ApiProperty()
   active: boolean;
-
-  @ApiProperty()
-  store_id: string;
 
   @ApiProperty()
   must_change_pin: boolean;

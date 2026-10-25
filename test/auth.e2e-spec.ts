@@ -45,7 +45,9 @@ describe('Authentication (e2e)', () => {
       token_type: 'Bearer',
       expires_in: 3_600,
       staff: {
-        name: 'Admin',
+        name: 'Admin Staff',
+        first_name: 'Admin',
+        last_name: 'Staff',
         role: 'admin',
         store_id: storeId,
         must_change_pin: false,
@@ -54,6 +56,45 @@ describe('Authentication (e2e)', () => {
     expect(response.body.access_token).toBeTypeOf('string');
     expect(response.body.staff.id).toBeTypeOf('string');
     expectNoSecrets(response.body);
+  });
+
+  it('returns first/last/computed names from the login, me and change-pin responses', async () => {
+    const loginResponse = await login(context.app, 'ADMIN001').expect(200);
+    const token = loginResponse.body.access_token as string;
+
+    expect(loginResponse.body.staff).toMatchObject({
+      first_name: 'Admin',
+      last_name: 'Staff',
+      name: 'Admin Staff',
+    });
+    expect(loginResponse.body.staff).not.toHaveProperty('pin_hash');
+    expect(loginResponse.body.staff).not.toHaveProperty('token_version');
+
+    const me = await request(context.app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set(bearer(token))
+      .expect(200);
+    expect(me.body).toMatchObject({
+      first_name: 'Admin',
+      last_name: 'Staff',
+      name: 'Admin Staff',
+    });
+    expect(me.body).not.toHaveProperty('pin_hash');
+    expect(me.body).not.toHaveProperty('token_version');
+
+    const changed = await request(context.app.getHttpServer())
+      .post('/api/v1/auth/change-pin')
+      .set(bearer(token))
+      .send({ current_pin: '246810', new_pin: '135791' })
+      .expect(200);
+    expect(changed.body.staff).toMatchObject({
+      first_name: 'Admin',
+      last_name: 'Staff',
+      name: 'Admin Staff',
+    });
+    expect(changed.body.staff).not.toHaveProperty('pin_hash');
+    expect(changed.body.staff).not.toHaveProperty('token_version');
+    expectNoSecrets(changed.body);
   });
 
   it('returns identical responses for an unknown code and a wrong PIN', async () => {

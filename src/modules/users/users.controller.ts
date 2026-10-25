@@ -68,7 +68,7 @@ export class UsersController {
 
   @Roles('admin')
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a staff name or role' })
+  @ApiOperation({ summary: 'Update a staff profile or role' })
   @ApiOkResponse({ type: StaffResponseDto })
   update(
     @CurrentPrincipal() principal: Principal,

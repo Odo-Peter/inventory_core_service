@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEnum,
   IsNotEmpty,
@@ -6,6 +7,7 @@ import {
   IsString,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 
 import { StaffRole } from '../../../generated/prisma/enums.js';
@@ -20,14 +22,22 @@ export class CreateStaffDto {
   staff_code: string;
 
   @ApiProperty({ example: 'Ada' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
+  @MinLength(1)
   @MaxLength(120)
   first_name: string;
 
   @ApiProperty({ example: 'Okafor' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
+  @MinLength(1)
   @MaxLength(120)
   last_name: string;
 

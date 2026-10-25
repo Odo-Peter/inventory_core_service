@@ -6,8 +6,17 @@ export class AuthStaffDto {
   @ApiProperty()
   id: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    readOnly: true,
+    description: 'Computed from first_name and last_name.',
+  })
   name: string;
+
+  @ApiProperty()
+  first_name: string;
+
+  @ApiProperty()
+  last_name: string;
 
   @ApiProperty({ enum: ['cashier', 'manager', 'admin'] })
   role: StaffRole;

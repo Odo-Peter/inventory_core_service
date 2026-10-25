@@ -50,7 +50,9 @@ model Staff {
   id                  String    @id @default(uuid()) @db.Uuid
   store_id            String    @db.Uuid
   staff_code          String
-  name                String
+  first_name          String
+  last_name           String
+  phone               String
   pin_hash            String
   role                StaffRole @default(cashier)
   active              Boolean   @default(true)
@@ -136,6 +138,8 @@ model AuditLog {
 **Staff**
 
 - Login = `staff_code` + PIN. `UNIQUE(store_id, staff_code)`; PINs are **not** unique.
+- Names are stored as `first_name` and `last_name` (both required, 1–120 characters after trimming). Responses also expose a read-only computed `name` (`first_name + ' ' + last_name`); clients never send `name`. Listing orders by `first_name`, `last_name`, then `staff_code`.
+- `phone` is required and stores the normalized E.164 form `+234XXXXXXXXXX` for Nigerian mobile numbers (prefixes 70x, 71x, 80x, 81x, 90x, 91x). Accepted input formats include local (`0803…`, `803…`), country-code (`234803…`) and spaced/hyphenated variants; the DTO normalizes before validation. Phone is **not** unique. Audit details only contain masked forms such as `+234803****567`.
 - Store only an argon2id `pin_hash` combined with the server-side `PIN_PEPPER`. Never log, return or audit-record a PIN or hash; exclude `pin_hash`, `token_version` and `failed_pin_attempts` from every entity/DTO/response.
 - PIN policy: 4–6 digits for Cashier, exactly 6 for Manager/Admin; reject all-same and ascending/descending runs. Temporary PINs are generated with `crypto.randomInt`, shown once, and set `must_change_pin = true`.
 - Failed attempts: `failed_pin_attempts` is incremented atomically with one `UPDATE ... RETURNING`, so parallel guesses cannot exceed the threshold. Lock duration escalates by attempt tier (`5, 15, 60` minutes by default). A successful login clears both fields.
@@ -143,7 +147,7 @@ model AuditLog {
 - `must_change_pin` blocks every authenticated route except change-PIN and logout (`403 pin_change_required`).
 - `token_version` is embedded in each JWT as `tv` and checked against the database on every request. Increment it on logout, PIN change/reset, deactivation, unlock and security revocation. Roles are read from the database on every request, so role changes and deactivation take effect immediately.
 - Deactivate with `active = false`; never hard-delete (history references staff). A staff member with an open shift cannot be deactivated (`409 staff_has_open_shift`).
-- `role`, name, deactivation and reactivation changes are audited. Promoting a Cashier to Manager or Admin sets `must_change_pin = true` so the new 6-digit PIN rule is enforced. The last active Admin cannot be demoted (`409 last_admin`); self-deactivation is forbidden (`403 forbidden`) and is audited for every other target.
+- `role`, profile (`first_name`, `last_name`, `phone`) and deactivation/reactivation changes are audited. Profile updates record only the changed field names in `staff.updated`, with masked `phone_from`/`phone_to` when the phone changes; full phone numbers and PIN material are never written to the audit log. Promoting a Cashier to Manager or Admin sets `must_change_pin = true` so the new 6-digit PIN rule is enforced. The last active Admin cannot be demoted (`409 last_admin`); self-deactivation is forbidden (`403 forbidden`) and is audited for every other target.
 - Manager/Admin reset/unlock requires the caller's own PIN as `acting_pin`; a Manager may only reset/unlock Cashiers.
 
 **Shift**
@@ -161,7 +165,7 @@ model AuditLog {
 
 - Append-only: no update or delete code paths, and enforced in the DB (below).
 - `action` is a free string (not an enum) so later phases add actions without a migration. Convention: lowercase `entity.verb`.
-- `details` holds before/after JSON. Never include PINs, hashes, tokens or raw provider payloads.
+- `details` holds before/after JSON. Never include PINs, hashes, tokens, full phone numbers, email addresses or raw provider payloads. The service rejects forbidden keys (`pin`, `pin_hash`, `token`, `password`, `secret`, `pepper`, `phone`, `phone_number`, `email`) but permits masked phone keys (`phone_from`, `phone_to`).
 - `staff_id` is null for events with no known staff (e.g. login attempt with an unknown staff code).
 - Write the audit row **in the same transaction** as the change it describes. Failed-login events are written outside any rolled-back transaction.
 
@@ -214,13 +218,14 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 - Manager+ list shifts with keyset pagination (`limit`, `cursor`), optional `staff_id`, and inclusive `from`/`to` dates interpreted in the store timezone.
 - Manager+ force-close is subject to the Manager/Cashier role rule; missing or cross-store shifts return `404 shift_not_found`.
 - Role guard order: authenticate → resolve store → check role. Roles are `cashier < manager < admin`; `@Roles('manager')` means manager or above, and every route must be `@Public()` or carry `@Roles`.
-- Login response contains only `access_token`, `token_type`, `expires_in` and a small staff object (`id`, `name`, `role`, `store_id`, `must_change_pin`). PIN hashes, attempt counters and token versions never leave the server.
+- Login, change-PIN and `/auth/me` responses use the same staff mapper output (or a trimmed subset: `id`, `name`, `first_name`, `last_name`, `role`, `store_id`, `must_change_pin`). PIN hashes, attempt counters and token versions never leave the server.
 
 ## 5. Seed data
 
 - One `Store` row from `SEED_STORE_NAME`, `SEED_STORE_CURRENCY` and `SEED_STORE_TIMEZONE` (placeholder values, e.g. currency `NGN`, timezone `Africa/Lagos`; confirm real values).
-- One initial `admin` Staff from `SEED_ADMIN_CODE`, `SEED_ADMIN_FIRST_NAME`, `SEED_ADMIN_LAST_NAME` and `SEED_ADMIN_PIN`. The PIN is hashed with argon2id + `PIN_PEPPER` before insert and is never committed to the repo.
-- The seed is idempotent: it updates the existing pilot store/admin metadata but never rewrites an existing PIN hash or `token_version`. It fails fast if the PIN is weak or the secrets are missing.
+- One initial `admin` Staff from `SEED_ADMIN_CODE`, `SEED_ADMIN_FIRST_NAME`, `SEED_ADMIN_LAST_NAME`, `SEED_ADMIN_PHONE` and `SEED_ADMIN_PIN`. The phone is normalized with `normalizeNigerianPhone` and stored as `+234…`; the PIN is hashed with argon2id + `PIN_PEPPER` before insert and is never committed to the repo or logged.
+- The seed is idempotent and diffs `first_name`, `last_name`, `phone`, `role` and `active` independently; it never rewrites an existing PIN hash or `token_version`. It fails fast if the PIN is weak, the phone is invalid, or required values/secrets are missing.
+- The setup migration (`phase_01_store_staff_shift_audit`) defines the `first_name`, `last_name` and `phone` columns directly; there is no separate backfill migration and no `name` column.
 - `prisma.config.ts` wires the seed command, so `npm run db:seed` is the supported entry point.
 
 ## 6. Acceptance checklist

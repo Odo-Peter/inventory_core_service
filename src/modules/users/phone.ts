@@ -12,6 +12,10 @@ export const NIGERIAN_PHONE_E164 = /^\+234[789][01]\d{8}$/;
  * Returns +234XXXXXXXXXX, or null if the input is not a valid Nigerian mobile number.
  */
 export function normalizeNigerianPhone(input: string): string | null {
+  if (typeof input !== 'string') {
+    return null;
+  }
+
   let digits = input.trim().replace(/[\s\-.()]/g, '');
 
   if (digits.startsWith(`+${COUNTRY_CODE}`)) {

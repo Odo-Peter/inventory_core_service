@@ -44,7 +44,9 @@ describe('Staff management (e2e)', () => {
       .set(bearer(adminToken))
       .send({
         staff_code: 'CASH001',
-        name: 'Cashier One',
+        first_name: 'Cashier',
+        last_name: 'One',
+        phone: '08031234567',
         role: 'cashier',
       })
       .expect(201);
@@ -86,7 +88,12 @@ describe('Staff management (e2e)', () => {
     await request(context.app.getHttpServer())
       .post('/api/v1/staff')
       .set(bearer(adminToken))
-      .send({ staff_code: 'CASH001', name: 'Duplicate' })
+      .send({
+        staff_code: 'CASH001',
+        first_name: 'Duplicate',
+        last_name: 'Staff',
+        phone: '08031234567',
+      })
       .expect(409)
       .expect((response) => {
         expect(response.body.code).toBe('staff_code_taken');
@@ -137,11 +144,17 @@ describe('Staff management (e2e)', () => {
     const response = await request(context.app.getHttpServer())
       .patch(`/api/v1/staff/${target.id}`)
       .set(bearer(adminToken))
-      .send({ name: 'Renamed', role: 'manager' })
+      .send({
+        first_name: 'Renamed',
+        last_name: 'Cashier',
+        role: 'manager',
+      })
       .expect(200);
 
     expect(response.body).toMatchObject({
-      name: 'Renamed',
+      first_name: 'Renamed',
+      last_name: 'Cashier',
+      name: 'Renamed Cashier',
       role: 'manager',
     });
 

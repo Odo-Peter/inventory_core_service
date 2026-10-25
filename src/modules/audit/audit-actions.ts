@@ -26,4 +26,9 @@ export const AUDIT_FORBIDDEN_DETAIL_KEYS = [
   'password',
   'secret',
   'pepper',
+  'phone',
+  'phone_number',
+  'email',
 ] as const;
+
+export const AUDIT_MASKED_DETAIL_KEYS = ['phone_from', 'phone_to'] as const;

@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 
 import { CLOCK, type Clock } from '../../common/clock.js';
 import { AppException } from '../../common/errors/app.exception.js';
-import type { StaffRole } from '../../generated/prisma/enums.js';
+import type { StaffModel } from '../../generated/prisma/models.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -17,17 +17,24 @@ import { PinHasherService } from './pin-hasher.service.js';
 import { PinPolicy } from './pin-policy.js';
 import type { Principal } from './principal.js';
 import { TokenService, type AccessToken } from './token.service.js';
+import {
+  toStaffResponse,
+  type StaffResponse,
+} from '../users/staff.mapper.js';
 
-interface AuthStaff {
-  id: string;
-  name: string;
-  role: StaffRole;
-  store_id: string;
-  must_change_pin: boolean;
-}
+type AuthStaff = Pick<
+  StaffResponse,
+  | 'id'
+  | 'name'
+  | 'first_name'
+  | 'last_name'
+  | 'role'
+  | 'store_id'
+  | 'must_change_pin'
+>;
 
 interface LoginResult {
-  staff: AuthStaff;
+  staff: StaffModel;
   token: AccessToken;
 }
 
@@ -273,13 +280,17 @@ export class AuthService {
     };
   }
 
-  private toAuthStaff(staff: AuthStaff): AuthStaff {
+  private toAuthStaff(staff: StaffModel): AuthStaff {
+    const mapped = toStaffResponse(staff, this.clock.now());
+
     return {
-      id: staff.id,
-      name: staff.name,
-      role: staff.role,
-      store_id: staff.store_id,
-      must_change_pin: staff.must_change_pin,
+      id: mapped.id,
+      name: mapped.name,
+      first_name: mapped.first_name,
+      last_name: mapped.last_name,
+      role: mapped.role,
+      store_id: mapped.store_id,
+      must_change_pin: mapped.must_change_pin,
     };
   }
 }

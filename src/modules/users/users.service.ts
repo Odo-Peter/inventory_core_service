@@ -36,7 +36,11 @@ export class UsersService {
   async list(principal: Principal): Promise<StaffResponse[]> {
     const staff = await this.prisma.staff.findMany({
       where: { store_id: principal.store_id },
-      orderBy: { first_name: 'asc' },
+      orderBy: [
+        { first_name: 'asc' },
+        { last_name: 'asc' },
+        { staff_code: 'asc' },
+      ],
     });
     const now = this.clock.now();
 
@@ -81,6 +85,9 @@ export class UsersService {
             details: {
               staff_code: staff.staff_code,
               role: staff.role,
+              first_name: staff.first_name,
+              last_name: staff.last_name,
+              phone: maskPhone(staff.phone),
             },
           },
           tx,
