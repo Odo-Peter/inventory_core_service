@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { AUDIT_ACTIONS } from '../src/modules/audit/audit-actions.js';
+import { generateStaffCode } from '../src/modules/users/staff-code.js';
 import {
   bearer,
   createStaff,
@@ -38,12 +39,11 @@ describe('Staff management (e2e)', () => {
     adminToken = (await loginAs(context, 'ADMIN001')).token;
   });
 
-  it('creates staff with a temporary PIN that forces a PIN change', async () => {
+  it('creates staff with a generated code and a temporary PIN that forces a PIN change', async () => {
     const response = await request(context.app.getHttpServer())
       .post('/api/v1/staff')
       .set(bearer(adminToken))
       .send({
-        staff_code: 'CASH001',
         first_name: 'Cashier',
         last_name: 'One',
         phone: '08031234567',
@@ -54,7 +54,7 @@ describe('Staff management (e2e)', () => {
     expectNoSecrets(response.body);
     expect(response.body.temporary_pin).toMatch(/^\d{6}$/);
     expect(response.body.staff).toMatchObject({
-      staff_code: 'CASH001',
+      staff_code: 'TECSH001',
       role: 'cashier',
       must_change_pin: true,
       active: true,
@@ -62,7 +62,7 @@ describe('Staff management (e2e)', () => {
 
     const loginResponse = await login(
       context.app,
-      'CASH001',
+      response.body.staff.staff_code,
       response.body.temporary_pin,
     ).expect(200);
     expect(loginResponse.body.staff.must_change_pin).toBe(true);
@@ -79,35 +79,139 @@ describe('Staff management (e2e)', () => {
     expect(audit?.details).not.toHaveProperty('temporary_pin');
   });
 
-  it('rejects duplicate staff codes in the same store only', async () => {
-    await createStaff(context, storeId, {
-      staffCode: 'CASH001',
+  it.each([
+    ['cashier', 'TECSH001'],
+    ['manager', 'TEMGR001'],
+    ['admin', 'TEADM001'],
+  ] as const)(
+    'generates a %s code with the store and role prefixes',
+    async (role, expectedCode) => {
+      const response = await request(context.app.getHttpServer())
+        .post('/api/v1/staff')
+        .set(bearer(adminToken))
+        .send({
+          first_name: 'Prefix',
+          last_name: role,
+          phone: '08031234567',
+          role,
+        })
+        .expect(201);
+
+      expect(response.body.staff.staff_code).toBe(expectedCode);
+    },
+  );
+
+  it('defaults to a cashier code when the role is omitted', async () => {
+    const response = await request(context.app.getHttpServer())
+      .post('/api/v1/staff')
+      .set(bearer(adminToken))
+      .send({
+        first_name: 'Default',
+        last_name: 'Role',
+        phone: '08031234567',
+      })
+      .expect(201);
+
+    expect(response.body.staff).toMatchObject({
+      staff_code: 'TECSH001',
       role: 'cashier',
     });
+  });
 
+  it('increments codes independently for each role and store', async () => {
+    const create = (role: string, token = adminToken) =>
+      request(context.app.getHttpServer())
+        .post('/api/v1/staff')
+        .set(bearer(token))
+        .send({
+          first_name: 'Generated',
+          last_name: role,
+          phone: '08031234567',
+          role,
+        })
+        .expect(201);
+
+    const firstCashier = await create('cashier');
+    const secondCashier = await create('cashier');
+    const firstManager = await create('manager');
+
+    expect(firstCashier.body.staff.staff_code).toBe('TECSH001');
+    expect(secondCashier.body.staff.staff_code).toBe('TECSH002');
+    expect(firstManager.body.staff.staff_code).toBe('TEMGR001');
+
+    const otherStore = await createStore(context.prisma, {
+      name: 'Second Store',
+      active: false,
+    });
+    const otherStoreCode = await context.prisma.$transaction((tx) =>
+      generateStaffCode(tx, otherStore.id, 'cashier'),
+    );
+
+    expect(otherStoreCode).toBe('SECSH001');
+  });
+
+  it('sanitizes the store prefix when the name has fewer than two letters', async () => {
+    await context.prisma.store.update({
+      where: { id: storeId },
+      data: { name: '123' },
+    });
+
+    const response = await request(context.app.getHttpServer())
+      .post('/api/v1/staff')
+      .set(bearer(adminToken))
+      .send({
+        first_name: 'Numeric',
+        last_name: 'Store',
+        phone: '08031234567',
+        role: 'cashier',
+      })
+      .expect(201);
+
+    expect(response.body.staff.staff_code).toBe('XXCSH001');
+  });
+
+  it('does not reuse codes left in lower gaps after staff are removed', async () => {
+    const removed = await createStaff(context, storeId, {
+      staffCode: 'TECSH001',
+      role: 'cashier',
+    });
+    await createStaff(context, storeId, {
+      staffCode: 'TECSH002',
+      role: 'cashier',
+    });
+    await context.prisma.staff.delete({ where: { id: removed.id } });
+
+    const response = await request(context.app.getHttpServer())
+      .post('/api/v1/staff')
+      .set(bearer(adminToken))
+      .send({
+        first_name: 'After',
+        last_name: 'Removal',
+        phone: '08031234567',
+        role: 'cashier',
+      })
+      .expect(201);
+
+    expect(response.body.staff.staff_code).toBe('TECSH003');
+  });
+
+  it('rejects a client-supplied staff code on create', async () => {
     await request(context.app.getHttpServer())
       .post('/api/v1/staff')
       .set(bearer(adminToken))
       .send({
         staff_code: 'CASH001',
-        first_name: 'Duplicate',
-        last_name: 'Staff',
+        first_name: 'Client',
+        last_name: 'Code',
         phone: '08031234567',
       })
-      .expect(409)
-      .expect((response) => {
-        expect(response.body.code).toBe('staff_code_taken');
-      });
+      .expect(400);
 
-    const otherStore = await createStore(context.prisma, {
-      name: 'Other Store',
-      active: false,
-    });
-    const sameCode = await createStaff(context, otherStore.id, {
-      staffCode: 'CASH001',
-      role: 'cashier',
-    });
-    expect(sameCode.staff_code).toBe('CASH001');
+    expect(
+      await context.prisma.staff.count({
+        where: { store_id: storeId, staff_code: 'CASH001' },
+      }),
+    ).toBe(0);
   });
 
   it('lists staff without secrets and computes lock status', async () => {

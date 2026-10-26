@@ -73,7 +73,6 @@ const ROLE_CASES: RoleCase[] = [
     method: 'post',
     path: () => '/api/v1/staff',
     body: (role) => ({
-      staff_code: `NEW_${role.toUpperCase()}`,
       first_name: 'New',
       last_name: role,
       phone: '08031234567',
@@ -173,7 +172,7 @@ describe('Authorization (e2e)', () => {
     }
   });
 
-  it('protects the last admin from demotion and self-deactivation', async () => {
+  it('blocks self role changes and self-deactivation', async () => {
     const admin = await context.prisma.staff.findFirstOrThrow({
       where: { store_id: storeId, staff_code: 'ADMIN' },
     });
@@ -182,9 +181,9 @@ describe('Authorization (e2e)', () => {
       .patch(`/api/v1/staff/${admin.id}`)
       .set(bearer(tokens.admin))
       .send({ role: 'manager' })
-      .expect(409)
+      .expect(403)
       .expect((response) => {
-        expect(response.body.code).toBe('last_admin');
+        expect(response.body.code).toBe('forbidden');
       });
 
     await request(context.app.getHttpServer())
@@ -192,30 +191,17 @@ describe('Authorization (e2e)', () => {
       .set(bearer(tokens.admin))
       .expect(403);
 
-    await createStaff(context, storeId, {
-      staffCode: 'ADMIN002',
-      role: 'admin',
-    });
-
-    await request(context.app.getHttpServer())
-      .patch(`/api/v1/staff/${admin.id}`)
-      .set(bearer(tokens.admin))
-      .send({ role: 'manager' })
-      .expect(200)
-      .expect((response) => {
-        expect(response.body.role).toBe('manager');
-      });
-
-    await request(context.app.getHttpServer())
+    const created = await request(context.app.getHttpServer())
       .post('/api/v1/staff')
       .set(bearer(tokens.admin))
       .send({
-        staff_code: 'AFTER_DEMOTION',
-        first_name: 'Nope',
-        last_name: 'Staff',
+        first_name: 'Still',
+        last_name: 'Admin',
         phone: '08031234567',
       })
-      .expect(403);
+      .expect(201);
+
+    expect(created.body.staff.staff_code).toBe('TECSH001');
   });
 
   it('requires every controller handler to be public or role-protected', async () => {

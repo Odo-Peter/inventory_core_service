@@ -13,7 +13,6 @@ import {
 } from './helpers/test-app.js';
 
 const VALID_CREATE = {
-  staff_code: 'CASH001',
   first_name: 'Ada',
   last_name: 'Okafor',
   phone: '08031234567',
@@ -50,7 +49,7 @@ describe('Staff profile management (e2e)', () => {
     await truncateAll(context.prisma);
     storeId = (await createStore(context.prisma)).id;
     await createStaffFixture(context, storeId, {
-      staff_code: 'ADMIN001',
+      staffCode: 'ADMIN001',
       first_name: 'Admin',
       last_name: 'Staff',
       role: 'admin',
@@ -78,7 +77,7 @@ describe('Staff profile management (e2e)', () => {
 
     expect(temporaryPin).toMatch(/^\d{6}$/);
     expect(response.body.staff).toMatchObject({
-      staff_code: 'CASH001',
+      staff_code: 'TECSH001',
       first_name: 'Ada',
       last_name: 'Okafor',
       phone: NORMALIZED_PHONE,
@@ -126,15 +125,15 @@ describe('Staff profile management (e2e)', () => {
     },
   );
 
-  it('rejects the read-only name field and other unknown fields on create', async () => {
+  it('rejects the read-only name field, a client staff code and other unknown fields on create', async () => {
     await postStaff({ ...VALID_CREATE, name: 'Ada Okafor' }).expect(400);
     await postStaff({ ...VALID_CREATE, nickname: 'Ada' }).expect(400);
+    await postStaff({ ...VALID_CREATE, staff_code: 'CASH001' }).expect(400);
   });
 
   it.each(PHONE_FORMATS)('stores the same normalized phone for %j', async (phone) => {
     const response = await postStaff({
       ...VALID_CREATE,
-      staff_code: `NORM${String(PHONE_FORMATS.indexOf(phone) + 1).padStart(3, '0')}`,
       phone,
     }).expect(201);
 
@@ -145,26 +144,17 @@ describe('Staff profile management (e2e)', () => {
     expect(stored.phone).toBe(NORMALIZED_PHONE);
   });
 
-  it('rejects a duplicate staff code but allows the same phone on two staff', async () => {
-    await postStaff(VALID_CREATE).expect(201);
-
-    await postStaff({
-      ...VALID_CREATE,
-      first_name: 'Duplicate',
-      phone: '08039999999',
-    })
-      .expect(409)
-      .expect((response) => {
-        expect(response.body.code).toBe('staff_code_taken');
-      });
+  it('generates a unique staff code for each staff member and allows the same phone on two staff', async () => {
+    const first = await postStaff(VALID_CREATE).expect(201);
 
     const second = await postStaff({
       ...VALID_CREATE,
-      staff_code: 'CASH002',
       first_name: 'Second',
       last_name: 'Cashier',
     }).expect(201);
 
+    expect(first.body.staff.staff_code).toBe('TECSH001');
+    expect(second.body.staff.staff_code).toBe('TECSH002');
     expect(second.body.staff.phone).toBe(NORMALIZED_PHONE);
     expect(
       await context.prisma.staff.count({
@@ -175,7 +165,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('updates only the role', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     const response = await patchStaff(target.id, { role: 'manager' }).expect(
@@ -192,7 +182,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('updates only the phone and re-normalizes it', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
       phone: '+2348031111111',
     });
 
@@ -209,7 +199,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('updates only the first name', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     const response = await patchStaff(target.id, {
@@ -223,7 +213,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('updates only the last name', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     const response = await patchStaff(target.id, {
@@ -237,7 +227,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('updates all profile fields and the role together', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     const response = await patchStaff(target.id, {
@@ -259,7 +249,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('returns the current record for an empty body without writing or auditing', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
     const auditCount = await context.prisma.auditLog.count({
       where: { entity_id: target.id },
@@ -285,7 +275,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('treats unchanged values as a no-op without writing or auditing', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
     const auditCount = await context.prisma.auditLog.count({
       where: { entity_id: target.id },
@@ -309,7 +299,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('rejects name, invalid phone and empty names on update', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     await patchStaff(target.id, { name: 'Renamed' }).expect(400);
@@ -319,11 +309,11 @@ describe('Staff profile management (e2e)', () => {
 
   it('allows only admins to update staff', async () => {
     const manager = await createStaffFixture(context, storeId, {
-      staff_code: 'MGR001',
+      staffCode: 'MGR001',
       role: 'manager',
     });
     const cashier = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
       role: 'cashier',
     });
     const managerToken = (await loginAs(context, 'MGR001')).token;
@@ -348,18 +338,18 @@ describe('Staff profile management (e2e)', () => {
     expect(manager.role).toBe('manager');
   });
 
-  it('keeps the last-admin protection and forces a PIN change on promotion', async () => {
+  it('blocks changing your own role and forces a PIN change on promotion', async () => {
     const admin = await context.prisma.staff.findFirstOrThrow({
       where: { staff_code: 'ADMIN001' },
     });
     const cashier = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     await patchStaff(admin.id, { role: 'manager' })
-      .expect(409)
+      .expect(403)
       .expect((response) => {
-        expect(response.body.code).toBe('last_admin');
+        expect(response.body.code).toBe('forbidden');
       });
 
     const promoted = await patchStaff(cashier.id, { role: 'admin' }).expect(
@@ -373,17 +363,17 @@ describe('Staff profile management (e2e)', () => {
 
   it('lists staff ordered by first name, last name and staff code', async () => {
     await createStaffFixture(context, storeId, {
-      staff_code: 'C',
+      staffCode: 'C',
       first_name: 'Aaa',
       last_name: 'Zzz',
     });
     await createStaffFixture(context, storeId, {
-      staff_code: 'ZZZ',
+      staffCode: 'ZZZ',
       first_name: 'Aaa',
       last_name: 'Aaa',
     });
     await createStaffFixture(context, storeId, {
-      staff_code: 'AAA',
+      staffCode: 'AAA',
       first_name: 'Aaa',
       last_name: 'Aaa',
     });
@@ -411,11 +401,11 @@ describe('Staff profile management (e2e)', () => {
 
   it('includes phone for manager and admin list and detail callers', async () => {
     await createStaffFixture(context, storeId, {
-      staff_code: 'MGR001',
+      staffCode: 'MGR001',
       role: 'manager',
     });
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
     const managerToken = (await loginAs(context, 'MGR001')).token;
 
@@ -440,7 +430,7 @@ describe('Staff profile management (e2e)', () => {
 
   it('records staff.updated audit rows for actual changes only', async () => {
     const target = await createStaffFixture(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
       phone: '+2348031111111',
     });
 

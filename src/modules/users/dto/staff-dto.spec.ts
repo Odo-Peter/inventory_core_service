@@ -123,6 +123,15 @@ describe('CreateStaffDto', () => {
 
     expect(errors.some((error) => error.property === 'name')).toBe(true);
   });
+
+  it('does not accept a client-supplied staff code', async () => {
+    const { errors } = await validateDto(CreateStaffDto, {
+      ...VALID_CREATE,
+      staff_code: 'CASH001',
+    });
+
+    expect(errors.some((error) => error.property === 'staff_code')).toBe(true);
+  });
 });
 
 describe('UpdateStaffDto', () => {
