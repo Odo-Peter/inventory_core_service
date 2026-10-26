@@ -52,7 +52,8 @@ help:
 	@echo "  make db-migrate name=foo      Create a named migration (migrate dev --name)"
 	@echo "  make db-migrate-deploy        Apply migrations (production)"
 	@echo "  make db-migrate-status        Show migration status"
-	@echo "  make db-seed                     Seed admin details from .env"
+	@echo "  make db-seed              Seed admin details from .env"
+	@echo "  make db-reset             Interactive Reset - NOTE: All data in the database will be erased."
 	@echo ""
 	@echo "Other"
 	@echo "  make deploy        Deploy the application"
@@ -201,6 +202,9 @@ db-migrate-status:
 
 db-seed:
 	npm run db:seed
+
+db-reset:
+	npx prisma migrate reset
 
 # ======================
 # Deploy & Cleanup

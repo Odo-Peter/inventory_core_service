@@ -474,7 +474,11 @@ export class UsersService {
         now,
         'acting_pin',
       );
-      throw new AppException(403, 'invalid_credentials', 'Invalid acting PIN');
+      throw new AppException(
+        403,
+        'invalid_credentials',
+        'The PIN you entered is incorrect. Please try again.',
+      );
     }
   }
 
