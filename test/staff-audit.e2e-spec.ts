@@ -32,7 +32,7 @@ describe('Staff audit trail (e2e)', () => {
     await truncateAll(context.prisma);
     storeId = (await createStore(context.prisma)).id;
     await createStaff(context, storeId, {
-      staff_code: 'ADMIN001',
+      staffCode: 'ADMIN001',
       role: 'admin',
     });
     adminToken = (await loginAs(context, 'ADMIN001')).token;
@@ -44,7 +44,6 @@ describe('Staff audit trail (e2e)', () => {
       .post('/api/v1/staff')
       .set(authHeader(adminToken))
       .send({
-        staff_code: 'CASH001',
         first_name: 'Ada',
         last_name: 'Okafor',
         phone,
@@ -61,7 +60,7 @@ describe('Staff audit trail (e2e)', () => {
     });
 
     expect(audit.details).toMatchObject({
-      staff_code: 'CASH001',
+      staff_code: 'TECSH001',
       role: 'cashier',
       first_name: 'Ada',
       last_name: 'Okafor',
@@ -76,7 +75,7 @@ describe('Staff audit trail (e2e)', () => {
 
   it('records staff.updated with changed fields and masked phone transitions', async () => {
     const target = await createStaff(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
       phone: '+2348031234567',
     });
 
@@ -114,7 +113,7 @@ describe('Staff audit trail (e2e)', () => {
 
   it('lists only the profile fields that actually changed', async () => {
     const target = await createStaff(context, storeId, {
-      staff_code: 'CASH001',
+      staffCode: 'CASH001',
     });
 
     await request(context.app.getHttpServer())

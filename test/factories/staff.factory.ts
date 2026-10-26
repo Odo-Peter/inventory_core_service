@@ -13,7 +13,6 @@ const PHONE_PREFIX = '803';
 let staffSequence = 0;
 
 export interface StaffInput {
-  staff_code: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -43,8 +42,6 @@ export function buildStaffInput(
   staffSequence += 1;
 
   return {
-    staff_code:
-      overrides.staff_code ?? `STAFF${staffSequence.toString().padStart(4, '0')}`,
     first_name: overrides.first_name ?? 'Test',
     last_name: overrides.last_name ?? 'Staff',
     phone: overrides.phone ?? nextPhone(staffSequence),
@@ -59,7 +56,6 @@ export async function createStaff(
   options: CreateStaffOptions = {},
 ): Promise<StaffModel> {
   const input = buildStaffInput({
-    staff_code: options.staff_code ?? options.staffCode,
     first_name: options.first_name,
     last_name: options.last_name,
     phone: options.phone,
@@ -70,8 +66,9 @@ export async function createStaff(
 
   return context.prisma.staff.create({
     data: {
+      staff_code:
+        options.staffCode ?? `STAFF${staffSequence.toString().padStart(6, '0')}`,
       store_id: storeId,
-      staff_code: input.staff_code,
       first_name: input.first_name,
       last_name: input.last_name,
       phone: input.phone,
