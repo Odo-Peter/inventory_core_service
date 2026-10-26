@@ -91,7 +91,7 @@ function parseCorsOrigins(env: NodeJS.ProcessEnv, nodeEnv: string): string[] {
     if (nodeEnv === 'production') {
       throw new Error('CORS_ORIGINS must be configured in production');
     }
-    return ['http://localhost:5173'];
+    return ['http://localhost:5173/'];
   }
 
   const origins = configured

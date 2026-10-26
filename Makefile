@@ -4,7 +4,7 @@
         lint format test test-watch test-cov test-e2e test-debug \
         test-db-up test-db-create test-db-reset test-db-drop test-env-check \
         deploy clean \
-        up down logs ps db-shell restart \
+        up down logs ps db-shell restart db-ensure \
         db-generate db-migrate-dev db-migrate-deploy db-migrate-status db-migrate db-seed
 
 TEST_DB := pos_test
@@ -64,6 +64,15 @@ help:
 install:
 	npm install
 
+# Start Postgres only if it isn't already running, and wait until it is healthy.
+db-ensure:
+	@if docker compose ps --status running --services | grep -qx db; then \
+		echo "Database already running"; \
+	else \
+		echo "Database not running, starting it..."; \
+	fi
+	@docker compose up -d --wait db
+
 # ======================
 # Build & Run
 # ======================
@@ -73,7 +82,7 @@ build:
 start:
 	npm run start
 
-dev:
+dev: db-ensure
 	npm run start:dev
 
 debug:

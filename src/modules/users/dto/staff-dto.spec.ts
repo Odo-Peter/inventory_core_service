@@ -9,7 +9,6 @@ import { CreateStaffDto } from './create-staff.dto.js';
 import { UpdateStaffDto } from './update-staff.dto.js';
 
 const VALID_CREATE = {
-  staff_code: 'CASH001',
   first_name: 'Ada',
   last_name: 'Okafor',
   phone: '08031234567',

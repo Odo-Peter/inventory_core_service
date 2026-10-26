@@ -16,6 +16,7 @@ import type { CreateStaffDto } from './dto/create-staff.dto.js';
 import type { UpdateStaffDto } from './dto/update-staff.dto.js';
 import { toStaffResponse, type StaffResponse } from './staff.mapper.js';
 import { maskPhone } from './phone.js';
+import { generateStaffCode } from './staff-code.js';
 
 export interface StaffWithTemporaryPin {
   staff: StaffResponse;
@@ -62,10 +63,12 @@ export class UsersService {
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
+        const staffCode = await generateStaffCode(tx, principal.store_id, role);
+
         const staff = await tx.staff.create({
           data: {
             store_id: principal.store_id,
-            staff_code: dto.staff_code,
+            staff_code: staffCode,
             first_name: dto.first_name,
             last_name: dto.last_name,
             phone: dto.phone,
@@ -119,6 +122,18 @@ export class UsersService {
   ): Promise<StaffResponse> {
     const target = await this.getTarget(principal.store_id, staffId);
 
+    if (
+      dto.role !== undefined &&
+      dto.role !== target.role &&
+      principal.staff_id === target.id
+    ) {
+      throw new AppException(
+        403,
+        'forbidden',
+        'You cannot change your own role',
+      );
+    }
+
     const data: {
       first_name?: string;
       last_name?: string;
@@ -137,7 +152,7 @@ export class UsersService {
       profileFields.push('last_name');
     }
     if (dto.phone !== undefined && dto.phone !== target.phone) {
-      data.phone = dto.phone; // already normalized to +234... by the DTO transform
+      data.phone = dto.phone;
       profileFields.push('phone');
     }
     if (dto.role !== undefined && dto.role !== target.role) {
@@ -203,6 +218,7 @@ export class UsersService {
 
     return toStaffResponse(updated, this.clock.now());
   }
+
   async deactivate(
     principal: Principal,
     staffId: string,

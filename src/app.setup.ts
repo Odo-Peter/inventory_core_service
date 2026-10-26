@@ -30,7 +30,7 @@ export function configureApp(app: INestApplication, config: AppConfig): void {
   });
   app.enableCors({
     origin: config.corsOrigins,
-    credentials: false,
+    credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
     exposedHeaders: ['X-Request-ID', 'Retry-After'],
