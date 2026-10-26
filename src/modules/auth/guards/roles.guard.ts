@@ -43,13 +43,17 @@ export class RolesGuard implements CanActivate {
     const principal = request.principal;
 
     if (!principal) {
-      throw new AppException(401, 'unauthorized', 'Authentication required');
+      throw new AppException(401, 'unauthorized', 'Please sign in to continue');
     }
 
     const requiredRank = Math.min(...roles.map((role) => ROLE_RANK[role]));
 
     if (ROLE_RANK[principal.role] < requiredRank) {
-      throw new AppException(403, 'insufficient_role', 'Insufficient role');
+      throw new AppException(
+        403,
+        'insufficient_role',
+        "You don't have permission to do that. Please ask an administrator if you need access.",
+      );
     }
 
     return true;
