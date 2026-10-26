@@ -14,13 +14,6 @@ import { StaffRole } from '../../../generated/prisma/enums.js';
 import { IsNigerianPhone } from '../phone.decorator.js';
 
 export class CreateStaffDto {
-  @ApiProperty({ example: 'CASHIER001' })
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(64)
-  @Matches(/^[A-Za-z0-9._-]+$/)
-  staff_code: string;
-
   @ApiProperty({ example: 'Ada' })
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.trim() : value,

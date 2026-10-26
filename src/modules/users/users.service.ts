@@ -16,6 +16,7 @@ import type { CreateStaffDto } from './dto/create-staff.dto.js';
 import type { UpdateStaffDto } from './dto/update-staff.dto.js';
 import { toStaffResponse, type StaffResponse } from './staff.mapper.js';
 import { maskPhone } from './phone.js';
+import { generateStaffCode } from './staff-code.js';
 
 export interface StaffWithTemporaryPin {
   staff: StaffResponse;
@@ -62,10 +63,12 @@ export class UsersService {
 
     try {
       const created = await this.prisma.$transaction(async (tx) => {
+        const staffCode = await generateStaffCode(tx, principal.store_id, role);
+
         const staff = await tx.staff.create({
           data: {
             store_id: principal.store_id,
-            staff_code: dto.staff_code,
+            staff_code: staffCode,
             first_name: dto.first_name,
             last_name: dto.last_name,
             phone: dto.phone,
