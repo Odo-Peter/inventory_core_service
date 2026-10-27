@@ -121,6 +121,13 @@ export class UsersService {
     dto: UpdateStaffDto,
   ): Promise<StaffResponse> {
     const target = await this.getTarget(principal.store_id, staffId);
+    if (!target.active) {
+      throw new AppException(
+        409,
+        'staff_inactive',
+        'Reactivate this staff member first',
+      );
+    }
 
     if (
       dto.role !== undefined &&
@@ -295,7 +302,11 @@ export class UsersService {
     const updated = await this.prisma.$transaction(async (tx) => {
       const staff = await tx.staff.update({
         where: { id: target.id },
-        data: { active: true },
+        data: {
+          active: true,
+          failed_pin_attempts: 0,
+          locked_until: null,
+        },
       });
 
       await this.audit.record(
@@ -322,6 +333,13 @@ export class UsersService {
     dto: ActingPinDto,
   ): Promise<StaffWithTemporaryPin> {
     const target = await this.getTarget(principal.store_id, staffId);
+    if (!target.active) {
+      throw new AppException(
+        409,
+        'staff_inactive',
+        'Reactivate this staff member first',
+      );
+    }
     await this.assertCanManageTarget(principal, target);
     await this.verifyActingPin(principal, dto.acting_pin);
 
@@ -367,6 +385,13 @@ export class UsersService {
     dto: ActingPinDto,
   ): Promise<StaffResponse> {
     const target = await this.getTarget(principal.store_id, staffId);
+    if (!target.active) {
+      throw new AppException(
+        409,
+        'staff_inactive',
+        'Reactivate this staff member first',
+      );
+    }
     await this.assertCanManageTarget(principal, target);
     await this.verifyActingPin(principal, dto.acting_pin);
 

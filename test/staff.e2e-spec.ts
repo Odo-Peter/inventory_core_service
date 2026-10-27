@@ -195,6 +195,35 @@ describe('Staff management (e2e)', () => {
     expect(response.body.staff.staff_code).toBe('TECSH003');
   });
 
+  it('does not reuse codes after staff are deactivated', async () => {
+    const deactivated = await createStaff(context, storeId, {
+      staffCode: 'TECSH001',
+      role: 'cashier',
+    });
+    await createStaff(context, storeId, {
+      staffCode: 'TECSH002',
+      role: 'cashier',
+    });
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${deactivated.id}/deactivate`)
+      .set(bearer(adminToken))
+      .expect(200);
+
+    const response = await request(context.app.getHttpServer())
+      .post('/api/v1/staff')
+      .set(bearer(adminToken))
+      .send({
+        first_name: 'After',
+        last_name: 'Deactivation',
+        phone: '08031234567',
+        role: 'cashier',
+      })
+      .expect(201);
+
+    expect(response.body.staff.staff_code).toBe('TECSH003');
+  });
+
   it('rejects a client-supplied staff code on create', async () => {
     await request(context.app.getHttpServer())
       .post('/api/v1/staff')
@@ -354,6 +383,81 @@ describe('Staff management (e2e)', () => {
       },
     });
     expect(audit).not.toBeNull();
+  });
+
+  it('reactivates staff and allows login again; reactivate clears lockout', async () => {
+    const target = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    const { token } = await loginAs(context, 'CASH001');
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${target.id}/deactivate`)
+      .set(bearer(adminToken))
+      .expect(200);
+
+    await request(context.app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set(bearer(token))
+      .expect(401);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${target.id}/reactivate`)
+      .set(bearer(adminToken))
+      .expect(200);
+
+    await login(context.app, 'CASH001').expect(200);
+  });
+
+  it('reactivate clears failed_pin_attempts and locked_until', async () => {
+    const target = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    await context.prisma.staff.update({
+      where: { id: target.id },
+      data: {
+        active: false,
+        failed_pin_attempts: 10,
+        locked_until: new Date('2099-01-01T00:00:00.000Z'),
+      },
+    });
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${target.id}/reactivate`)
+      .set(bearer(adminToken))
+      .expect(200);
+
+    const staff = await context.prisma.staff.findUniqueOrThrow({
+      where: { id: target.id },
+    });
+    expect(staff.active).toBe(true);
+    expect(staff.failed_pin_attempts).toBe(0);
+    expect(staff.locked_until).toBeNull();
+  });
+
+  it('reset PIN and update reject inactive staff with 409 staff_inactive', async () => {
+    const target = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${target.id}/deactivate`)
+      .set(bearer(adminToken))
+      .expect(200);
+
+    await request(context.app.getHttpServer())
+      .patch(`/api/v1/staff/${target.id}`)
+      .set(bearer(adminToken))
+      .send({ first_name: 'New' })
+      .expect(409);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/staff/${target.id}/reset-pin`)
+      .set(bearer(adminToken))
+      .send({ acting_pin: '246810' })
+      .expect(409);
   });
 
   it('reactivates staff without restoring old tokens', async () => {

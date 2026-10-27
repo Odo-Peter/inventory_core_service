@@ -41,15 +41,30 @@ export class AuthGuard implements CanActivate {
     const claims = await this.tokenService.verify(token);
     const staff = await this.prisma.staff.findUnique({
       where: { id: claims.sub },
+      select: {
+        id: true,
+        store_id: true,
+        role: true,
+        active: true,
+        token_version: true,
+        must_change_pin: true,
+      },
     });
 
-    if (
-      !staff ||
-      staff.store_id !== claims.store_id ||
-      !staff.active ||
-      staff.token_version !== claims.tv
-    ) {
+    if (!staff || staff.store_id !== claims.store_id) {
       throw new AppException(401, 'unauthorized', 'Invalid or revoked token');
+    }
+
+    if (staff.token_version !== claims.tv) {
+      throw new AppException(401, 'unauthorized', 'Invalid or revoked token');
+    }
+
+    if (staff.active === false) {
+      throw new AppException(
+        401,
+        'account_deactivated',
+        'Your account has been deactivated. Contact an administrator.',
+      );
     }
 
     const allowPinChange = this.reflector.getAllAndOverride<boolean>(

@@ -104,6 +104,25 @@ export class AuthService {
       throw this.invalidCredentials();
     }
 
+    if (staff.active === false) {
+      await this.audit.record({
+        store_id: store.id,
+        staff_id: staff.id,
+        action: AUDIT_ACTIONS.loginFailed,
+        entity_type: 'Staff',
+        entity_id: staff.id,
+        details: {
+          staff_code: dto.staff_code,
+          reason: 'account_deactivated',
+        },
+      });
+      throw new AppException(
+        403,
+        'account_deactivated',
+        'Your account has been deactivated. Contact an administrator.',
+      );
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedStaff = await tx.staff.update({
         where: { id: staff.id },
@@ -166,6 +185,14 @@ export class AuthService {
 
     if (!staff) {
       throw new AppException(401, 'unauthorized', 'Staff not found');
+    }
+
+    if (staff.active === false) {
+      throw new AppException(
+        401,
+        'account_deactivated',
+        'Your account has been deactivated. Contact an administrator.',
+      );
     }
 
     const openShift = await this.prisma.shift.findFirst({
