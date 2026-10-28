@@ -11,7 +11,7 @@ Read `00-global-conventions.md` first. Implement **only** the models in this doc
 | Related ADRs | 0004 (approval roles), 0006, 0007, 0008, 0009, 0010, 0011 |
 | Nest module | `sales` or `payments` — choose one and stay consistent (global conventions) |
 
-Other Phase 7 features (low-stock alerts, discounts, dashboard, audit log screen, shift reconciliation) use existing tables and fields. Customer/loyalty records are **not** part of this phase.
+Other Phase 7 features (low-stock alerts, discounts, dashboard, audit log screen backed by the Admin-only `/api/v1/audit-logs` read API, shift reconciliation) use existing tables and fields. Customer/loyalty records are **not** part of this phase.
 
 ## 1. Prisma schema
 

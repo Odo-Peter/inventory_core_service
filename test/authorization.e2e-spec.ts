@@ -69,6 +69,18 @@ const ROLE_CASES: RoleCase[] = [
     expected: { cashier: 403, manager: 200, admin: 200 },
   },
   {
+    name: 'GET /audit-logs',
+    method: 'get',
+    path: () => '/api/v1/audit-logs',
+    expected: { cashier: 403, manager: 403, admin: 200 },
+  },
+  {
+    name: 'GET /audit-logs/actions',
+    method: 'get',
+    path: () => '/api/v1/audit-logs/actions',
+    expected: { cashier: 403, manager: 403, admin: 200 },
+  },
+  {
     name: 'POST /staff',
     method: 'post',
     path: () => '/api/v1/staff',

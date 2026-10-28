@@ -361,11 +361,12 @@ describe('Shifts (e2e)', () => {
     ).toBe(1);
   });
 
-  it('pages shifts with keyset pagination and staff filters', async () => {
-    const start = Date.parse('2026-10-20T10:00:00.000Z');
+  it('pages shifts with page metadata, filters, and stable ordering', async () => {
+    const clockIn = new Date('2026-10-20T10:00:00.000Z');
+    const createdIds: string[] = [];
+
     for (let index = 0; index < 5; index += 1) {
-      const clockIn = new Date(start + index * 3_600_000);
-      await context.prisma.shift.create({
+      const created = await context.prisma.shift.create({
         data: {
           store_id: storeId,
           staff_id: cashierId,
@@ -375,13 +376,14 @@ describe('Shifts (e2e)', () => {
           closed_by_staff_id: cashierId,
         },
       });
+      createdIds.push(created.id);
     }
 
     const otherCashier = await createStaff(context, storeId, {
       staffCode: 'CASH002',
       role: 'cashier',
     });
-    await context.prisma.shift.create({
+    const otherShift = await context.prisma.shift.create({
       data: {
         store_id: storeId,
         staff_id: otherCashier.id,
@@ -390,17 +392,50 @@ describe('Shifts (e2e)', () => {
         close_reason: 'normal',
       },
     });
+    createdIds.push(otherShift.id);
+
+    const otherStore = await createStore(context.prisma, {
+      name: 'Other Store',
+    });
+    const foreignStaff = await createStaff(context, otherStore.id, {
+      staffCode: 'FOREIGN',
+    });
+    await context.prisma.shift.create({
+      data: {
+        store_id: otherStore.id,
+        staff_id: foreignStaff.id,
+        clock_in_at: new Date('2026-10-20T10:00:00.000Z'),
+        clock_out_at: new Date('2026-10-20T11:00:00.000Z'),
+        close_reason: 'normal',
+      },
+    });
+
+    const all = await request(context.app.getHttpServer())
+      .get('/api/v1/shifts')
+      .set(bearer(managerToken))
+      .expect(200);
+    expect(all.body.meta).toEqual({
+      page: 1,
+      page_size: 25,
+      total: 6,
+      total_pages: 1,
+    });
+    expect(all.body.data).toHaveLength(6);
 
     const first = await request(context.app.getHttpServer())
-      .get('/api/v1/shifts?limit=2')
+      .get('/api/v1/shifts?page_size=2&page=1')
       .set(bearer(managerToken))
       .expect(200);
     const second = await request(context.app.getHttpServer())
-      .get(`/api/v1/shifts?limit=2&cursor=${first.body.next_cursor}`)
+      .get('/api/v1/shifts?page_size=2&page=2')
       .set(bearer(managerToken))
       .expect(200);
     const third = await request(context.app.getHttpServer())
-      .get(`/api/v1/shifts?limit=2&cursor=${second.body.next_cursor}`)
+      .get('/api/v1/shifts?page_size=2&page=3')
+      .set(bearer(managerToken))
+      .expect(200);
+    const beyond = await request(context.app.getHttpServer())
+      .get('/api/v1/shifts?page_size=2&page=4')
       .set(bearer(managerToken))
       .expect(200);
 
@@ -411,16 +446,45 @@ describe('Shifts (e2e)', () => {
     ].map((shift: { id: string }) => shift.id);
     expect(ids).toHaveLength(6);
     expect(new Set(ids).size).toBe(6);
-    expect(first.body.next_cursor).toBeTypeOf('string');
-    expect(second.body.next_cursor).toBeTypeOf('string');
-    expect(third.body.next_cursor).toBeNull();
+    expect([...ids].sort()).toEqual([...createdIds].sort());
+    expect([
+      first.body.data.length,
+      second.body.data.length,
+      third.body.data.length,
+    ]).toEqual([2, 2, 2]);
+    expect(first.body.meta).toEqual({
+      page: 1,
+      page_size: 2,
+      total: 6,
+      total_pages: 3,
+    });
+    expect(third.body.meta).toEqual({
+      page: 3,
+      page_size: 2,
+      total: 6,
+      total_pages: 3,
+    });
+    expect(beyond.body.data).toEqual([]);
+    expect(beyond.body.meta).toEqual({
+      page: 4,
+      page_size: 2,
+      total: 6,
+      total_pages: 3,
+    });
+    expect(first.body).not.toHaveProperty('next_cursor');
 
     const filtered = await request(context.app.getHttpServer())
-      .get(`/api/v1/shifts?staff_id=${otherCashier.id}`)
+      .get(`/api/v1/shifts?staff_id=${otherCashier.id}&page_size=1`)
       .set(bearer(managerToken))
       .expect(200);
     expect(filtered.body.data).toHaveLength(1);
     expect(filtered.body.data[0].staff_id).toBe(otherCashier.id);
+    expect(filtered.body.meta).toEqual({
+      page: 1,
+      page_size: 1,
+      total: 1,
+      total_pages: 1,
+    });
 
     await request(context.app.getHttpServer())
       .get('/api/v1/shifts?from=2026-13-01')
@@ -430,18 +494,23 @@ describe('Shifts (e2e)', () => {
         expect(response.body.code).toBe('invalid_date');
       });
 
-    await request(context.app.getHttpServer())
-      .get('/api/v1/shifts?cursor=not-a-uuid')
-      .set(bearer(managerToken))
-      .expect(400);
-
-    await request(context.app.getHttpServer())
-      .get('/api/v1/shifts?cursor=00000000-0000-4000-8000-000000000000')
-      .set(bearer(managerToken))
-      .expect(404)
-      .expect((response) => {
-        expect(response.body.code).toBe('shift_not_found');
-      });
+    for (const params of [
+      'page=0',
+      'page=-1',
+      'page=1.5',
+      'page=abc',
+      'page=10001',
+      'page_size=0',
+      'page_size=101',
+      'page_size=abc',
+      'cursor=00000000-0000-4000-8000-000000000000',
+      'limit=2',
+    ]) {
+      await request(context.app.getHttpServer())
+        .get(`/api/v1/shifts?${params}`)
+        .set(bearer(managerToken))
+        .expect(400);
+    }
   });
 
   it('keeps shift staff links backed by refactored first and last names', async () => {

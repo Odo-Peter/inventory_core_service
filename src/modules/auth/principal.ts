@@ -4,6 +4,7 @@ export interface Principal {
   staff_id: string;
   store_id: string;
   role: StaffRole;
+  timezone?: string;
 }
 
 export const ROLE_RANK: Record<StaffRole, number> = {

@@ -8,13 +8,13 @@
 
 ## How to use this checklist
 
-- [ ] Complete phases in order unless a dependency is explicitly independent.
-- [ ] Add automated tests as each feature is implemented.
-- [ ] Keep frontend and backend API changes compatible because they deploy independently.
-- [ ] Enforce business rules in the backend and database, not just the UI.
+- [x] Complete phases in order unless a dependency is explicitly independent.
+- [x] Add automated tests as each feature is implemented.
+- [x] Keep frontend and backend API changes compatible because they deploy independently.
+- [x] Enforce business rules in the backend and database, not just the UI.
 - [ ] Do not invent values for unresolved tax, security, hosting, or operational decisions.
-- [ ] Record material architecture changes in a new ADR before implementing them.
-- [ ] Keep deferred features out of v1 unless scope is explicitly reconsidered.
+- [x] Record material architecture changes in a new ADR before implementing them.
+- [x] Keep deferred features out of v1 unless scope is explicitly reconsidered.
 
 ---
 
@@ -76,12 +76,12 @@
 
 ### API and CI/CD
 
-- [ ] Establish REST endpoints under `/api/v1`.
-- [ ] Generate OpenAPI documentation from NestJS.
-- [ ] Generate frontend API types/client from OpenAPI.
-- [ ] Ensure the frontend does not import backend source code.
-- [ ] Run linting, type checks, and unit tests in pull requests.
-- [ ] Configure integration tests against real PostgreSQL.
+- [x] Establish REST endpoints under `/api/v1`.
+- [x] Generate OpenAPI documentation from NestJS.
+- [x] Generate frontend API types/client from OpenAPI.
+- [x] Ensure the frontend does not import backend source code.
+- [x] Run linting, type checks, and unit tests in pull requests.
+- [x] Configure integration tests against real PostgreSQL.
 - [ ] Configure merge-to-staging deployment.
 - [ ] Require explicit approval for production deployment.
 - [ ] Document local setup and test commands in each repository.
@@ -92,23 +92,23 @@
 
 ## Phase 2 — Database foundations, store configuration, and audit
 
-- [ ] Use UUID identifiers for business records.
-- [ ] Store monetary amounts as integer minor units.
-- [ ] Store timestamps in UTC.
-- [ ] Configure a store-specific IANA timezone.
-- [ ] Configure one currency per store.
-- [ ] Add store-level configuration for tax, tills, and payment methods.
-- [ ] Add `store_id` to applicable top-level business records.
-- [ ] Derive store scope from authenticated server context, never from a trusted client-supplied `store_id`.
-- [ ] Define database constraints, indexes, and foreign keys.
+- [x] Use UUID identifiers for business records.
+- [x] Store monetary amounts as integer minor units.
+- [x] Store timestamps in UTC.
+- [x] Configure a store-specific IANA timezone.
+- [x] Configure one currency per store.
+- [x] Add store-level configuration for tax, tills, and payment methods.
+- [x] Add `store_id` to applicable top-level business records.
+- [x] Derive store scope from authenticated server context, never from a trusted client-supplied `store_id`.
+- [x] Define database constraints, indexes, and foreign keys.
 - [ ] Create core models for Store, Staff, Till, Shift, Category, Item, PriceHistory, StockMovement, POSAccount, Sale, SaleItem, Payment, Receipt, and AuditLog.
 - [ ] Add supporting records for opening stock, receiving, stock counts, and device registration as needed.
-- [ ] Implement an append-only audit-writing service.
-- [ ] Restrict audit-log access to authorized Admins and Managers.
-- [ ] Ensure audit records never contain PINs, tokens, or secrets.
-- [ ] Add PostgreSQL integration tests for constraints and persistence.
+- [x] Implement an append-only audit-writing service.
+- [x] Restrict audit-log access to Admins and expose a read-only, page-paginated listing only; Managers and Cashiers cannot read audit entries.
+- [x] Ensure audit records never contain PINs, tokens, or secrets.
+- [x] Add PostgreSQL integration tests for constraints and persistence.
 - [ ] Verify migrations against a fresh database.
-- [ ] Provide non-production development seed data.
+- [x] Provide non-production development seed data.
 
 **Exit criteria:** database migrations are reproducible, store isolation is enforced, and audit foundations are tested.
 
@@ -118,29 +118,29 @@
 
 ### Authentication and session management
 
-- [ ] Implement staff code/name and 4–6 digit PIN login.
-- [ ] Store only secure PIN hashes.
-- [ ] Implement short-lived access JWTs held in frontend memory.
+- [x] Implement staff code/name and 4–6 digit PIN login.
+- [x] Store only secure PIN hashes.
+- [x] Implement short-lived access JWTs held in frontend memory.
 - [ ] Implement rotating refresh tokens using `Secure`, `HttpOnly` cookies.
 - [ ] Configure cookie attributes, CORS, and CSRF protection.
 - [ ] Implement refresh-token rotation and reuse detection.
 - [ ] Support server-side session revocation and logout.
-- [ ] Implement rate limiting and temporary lockout after repeated failed PIN attempts.
-- [ ] Audit failed-login, lockout, and unlock events without recording PIN values.
+- [x] Implement rate limiting and temporary lockout after repeated failed PIN attempts.
+- [x] Audit failed-login, lockout, and unlock events without recording PIN values.
 - [ ] Allow authorized Manager/Admin staff to unlock accounts after identity verification.
-- [ ] Implement Manager/Admin-controlled PIN reset.
-- [ ] Audit PIN resets and revoke the affected staff member's sessions.
+- [x] Implement Manager/Admin-controlled PIN reset.
+- [x] Audit PIN resets and revoke the affected staff member's sessions.
 
 ### Roles and staff lifecycle
 
-- [ ] Implement Admin, Manager, and Cashier roles.
-- [ ] Enforce permissions on the backend.
-- [ ] Test both permitted and forbidden operations for each role.
-- [ ] Implement staff deactivation, immediate session revocation, and audit logging.
-- [ ] Preserve historical records when staff are deactivated.
-- [ ] Implement staff reactivation with audit logging.
-- [ ] Require fresh authentication after reactivation; keep old sessions revoked.
-- [ ] Define and implement audited resolution of a departing staff member's open shift.
+- [x] Implement Admin, Manager, and Cashier roles.
+- [x] Enforce permissions on the backend.
+- [x] Test both permitted and forbidden operations for each role.
+- [x] Implement staff deactivation, immediate session revocation, and audit logging.
+- [x] Preserve historical records when staff are deactivated.
+- [x] Implement staff reactivation with audit logging.
+- [x] Require fresh authentication after reactivation; keep old sessions revoked.
+- [x] Define and implement audited resolution of a departing staff member's open shift.
 
 ### POS device access
 

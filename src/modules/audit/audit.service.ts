@@ -2,13 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import {
-  AUDIT_FORBIDDEN_DETAIL_KEYS,
-  AUDIT_MASKED_DETAIL_KEYS,
-  type AuditAction,
-} from './audit-actions.js';
-
-const MASKED_PHONE_E164 = /^\+234[789][01]\d\*{4}\d{3}$/;
+import type { AuditAction } from './audit-actions.js';
+import { assertDetailsAreSafe } from './audit-details.js';
 
 export interface AuditRecordInput {
   store_id: string;
@@ -17,42 +12,6 @@ export interface AuditRecordInput {
   entity_type: string;
   entity_id?: string | null;
   details?: Prisma.InputJsonObject;
-}
-
-function assertDetailsAreSafe(value: unknown): void {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      assertDetailsAreSafe(item);
-    }
-    return;
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return;
-  }
-
-  for (const [key, nestedValue] of Object.entries(value)) {
-    const normalizedKey = key.toLowerCase();
-    const isMaskedKey = AUDIT_MASKED_DETAIL_KEYS.some(
-      (candidate) => normalizedKey === candidate,
-    );
-    const isMaskedPhoneValue =
-      normalizedKey === 'phone' &&
-      typeof nestedValue === 'string' &&
-      MASKED_PHONE_E164.test(nestedValue);
-    const forbidden =
-      !isMaskedKey &&
-      !isMaskedPhoneValue &&
-      AUDIT_FORBIDDEN_DETAIL_KEYS.some((candidate) =>
-        normalizedKey.includes(candidate),
-      );
-
-    if (forbidden) {
-      throw new Error(`Audit details contain a forbidden key: ${key}`);
-    }
-
-    assertDetailsAreSafe(nestedValue);
-  }
 }
 
 @Injectable()

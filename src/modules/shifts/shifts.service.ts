@@ -3,6 +3,12 @@ import { Inject, Injectable } from '@nestjs/common';
 import { CLOCK, type Clock } from '../../common/clock.js';
 import { AppException } from '../../common/errors/app.exception.js';
 import {
+  buildPageMeta,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  toSkipTake,
+} from '../../common/pagination/pagination.js';
+import {
   startOfDayInTimeZone,
   startOfNextDayInTimeZone,
 } from '../../common/timezone.js';
@@ -20,8 +26,6 @@ import type {
   ShiftResponseDto,
 } from './dto/shift-response.dto.js';
 import { toShiftResponse } from './shift.mapper.js';
-
-const DEFAULT_PAGE_SIZE = 20;
 
 @Injectable()
 export class ShiftsService {
@@ -205,16 +209,10 @@ export class ShiftsService {
     principal: Principal,
     query: ListShiftsQueryDto,
   ): Promise<ShiftListResponseDto> {
-    const store = await this.prisma.store.findUnique({
-      where: { id: principal.store_id },
-      select: { timezone: true },
-    });
-
-    if (!store) {
-      throw new AppException(404, 'store_not_found', 'Store not found');
-    }
-
-    const limit = query.limit ?? DEFAULT_PAGE_SIZE;
+    const timezone =
+      principal.timezone ?? (await this.loadStoreTimezone(principal.store_id));
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.page_size ?? DEFAULT_PAGE_SIZE;
     const where: Prisma.ShiftWhereInput = {
       store_id: principal.store_id,
     };
@@ -227,57 +225,33 @@ export class ShiftsService {
       if (query.from) {
         where.clock_in_at = {
           ...(where.clock_in_at as Prisma.DateTimeFilter | undefined),
-          gte: startOfDayInTimeZone(query.from, store.timezone),
+          gte: startOfDayInTimeZone(query.from, timezone),
         };
       }
       if (query.to) {
         where.clock_in_at = {
           ...(where.clock_in_at as Prisma.DateTimeFilter | undefined),
-          lt: startOfNextDayInTimeZone(query.to, store.timezone),
+          lt: startOfNextDayInTimeZone(query.to, timezone),
         };
       }
     } catch {
       throw new AppException(400, 'invalid_date', 'Invalid date filter');
     }
 
-    if (query.cursor) {
-      const cursorShift = await this.prisma.shift.findFirst({
-        where: {
-          id: query.cursor,
-          store_id: principal.store_id,
-        },
-        select: { id: true, clock_in_at: true },
-      });
-
-      if (!cursorShift) {
-        throw new AppException(404, 'shift_not_found', 'Shift not found');
-      }
-
-      where.AND = [
-        {
-          OR: [
-            { clock_in_at: { lt: cursorShift.clock_in_at } },
-            {
-              clock_in_at: cursorShift.clock_in_at,
-              id: { lt: cursorShift.id },
-            },
-          ],
-        },
-      ];
-    }
-
-    const shifts = await this.prisma.shift.findMany({
-      where,
-      orderBy: [{ clock_in_at: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-    });
-
-    const hasMore = shifts.length > limit;
-    const page = hasMore ? shifts.slice(0, limit) : shifts;
+    const { skip, take } = toSkipTake(page, pageSize);
+    const [shifts, total] = await this.prisma.$transaction([
+      this.prisma.shift.findMany({
+        where,
+        orderBy: [{ clock_in_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.shift.count({ where }),
+    ]);
 
     return {
-      data: page.map(toShiftResponse),
-      next_cursor: hasMore && page.length > 0 ? page[page.length - 1].id : null,
+      data: shifts.map(toShiftResponse),
+      meta: buildPageMeta(total, page, pageSize),
     };
   }
 
@@ -364,6 +338,19 @@ export class ShiftsService {
     });
 
     return toShiftResponse(closed);
+  }
+
+  private async loadStoreTimezone(storeId: string): Promise<string> {
+    const store = await this.prisma.store.findUnique({
+      where: { id: storeId },
+      select: { timezone: true },
+    });
+
+    if (!store) {
+      throw new AppException(404, 'store_not_found', 'Store not found');
+    }
+
+    return store.timezone;
   }
 
   private assertCanClockInOrOut(principal: Principal): void {
