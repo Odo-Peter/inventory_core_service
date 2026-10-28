@@ -17,10 +17,7 @@ import { PinHasherService } from './pin-hasher.service.js';
 import { PinPolicy } from './pin-policy.js';
 import type { Principal } from './principal.js';
 import { TokenService, type AccessToken } from './token.service.js';
-import {
-  toStaffResponse,
-  type StaffResponse,
-} from '../users/staff.mapper.js';
+import { toStaffResponse, type StaffResponse } from '../users/staff.mapper.js';
 
 type AuthStaff = Pick<
   StaffResponse,
@@ -28,6 +25,7 @@ type AuthStaff = Pick<
   | 'name'
   | 'first_name'
   | 'last_name'
+  | 'staff_code'
   | 'role'
   | 'store_id'
   | 'must_change_pin'
@@ -104,6 +102,25 @@ export class AuthService {
       throw this.invalidCredentials();
     }
 
+    if (staff.active === false) {
+      await this.audit.record({
+        store_id: store.id,
+        staff_id: staff.id,
+        action: AUDIT_ACTIONS.loginFailed,
+        entity_type: 'Staff',
+        entity_id: staff.id,
+        details: {
+          staff_code: dto.staff_code,
+          reason: 'account_deactivated',
+        },
+      });
+      throw new AppException(
+        403,
+        'account_deactivated',
+        'Your account has been deactivated. Contact an administrator.',
+      );
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedStaff = await tx.staff.update({
         where: { id: staff.id },
@@ -168,14 +185,25 @@ export class AuthService {
       throw new AppException(401, 'unauthorized', 'Staff not found');
     }
 
-    const openShift = await this.prisma.shift.findFirst({
-      where: {
-        store_id: principal.store_id,
-        staff_id: principal.staff_id,
-        clock_out_at: null,
-      },
-      select: { id: true },
-    });
+    if (staff.active === false) {
+      throw new AppException(
+        401,
+        'account_deactivated',
+        'Your account has been deactivated. Contact an administrator.',
+      );
+    }
+
+    const openShift =
+      staff.role === 'admin'
+        ? null
+        : await this.prisma.shift.findFirst({
+            where: {
+              store_id: principal.store_id,
+              staff_id: principal.staff_id,
+              clock_out_at: null,
+            },
+            select: { id: true },
+          });
 
     return {
       ...this.toAuthStaff(staff),
@@ -288,6 +316,7 @@ export class AuthService {
       name: mapped.name,
       first_name: mapped.first_name,
       last_name: mapped.last_name,
+      staff_code: mapped.staff_code,
       role: mapped.role,
       store_id: mapped.store_id,
       must_change_pin: mapped.must_change_pin,

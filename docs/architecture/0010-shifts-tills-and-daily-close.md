@@ -19,6 +19,24 @@ Cash accountability requires explicit ownership of a till and a record of openin
 - Daily close does not shut down the system or block the next business day. Store timezone defines the business day.
 - Reopening a daily close requires Admin/Manager authority and a mandatory reason. Preserve the original signoff and reopening event; sign off again after review. Any corrections are separately audited.
 
+### Who can do what
+
+| Action                              | Cashier | Manager | Admin |
+| ----------------------------------- | :-----: | :-----: | :---: |
+| Start own shift                     |   Yes   |   Yes   |  No   |
+| Close own shift (normal)            |   Yes   |   Yes   |  No   |
+| Force-close a cashier shift         |   No    |   Yes   |  Yes  |
+| Force-close a manager shift         |   No    |   No    |  Yes  |
+| Force-close an admin shift (legacy) |   No    |   No    |  Yes  |
+
+- Cashier and Manager may start and normally close their own shift. Normal close remains self-only: neither role can close another staff member's shift through it.
+- Admins administer the store but do not hold shifts. Cashier and Manager shifts own the drawer cash, so an Admin holding a shift would blur cash accountability. An Admin who tries to start or normally close a shift receives `403 forbidden`; Admins use the dedicated force-close endpoint instead.
+- Force-close keeps the existing tiered rule: a Manager may force-close only Cashier shifts; an Admin may force-close a shift owned by any role. A Cashier cannot force-close anything. Force-close still requires a reason, stores it in `closing_notes`, sets `close_reason = forced`, sets `closed_by_staff_id` to the caller, and is audited.
+- **Legacy admin shifts:** an Admin may already have an open shift from before this rule. It is not auto-closed and no migration is performed. The Admin can force-close it.
+- **Role changes with an open shift:** changing a staff member's role while they have an open shift is rejected with `409 staff_has_open_shift` ("Close the open shift before changing this role"). This prevents a Cashier or Manager with an open shift from becoming an Admin who can no longer close it normally.
+- `GET /auth/me` reports `active_shift_id: null` for Admins, including an Admin with a legacy open shift.
+- Roles are read from the authenticated `Staff` row on every request, never from a token claim or request body (ADR 0004). Role changes therefore take effect immediately, and `token_version` invalidates stale tokens on deactivation, PIN changes, and security revocations.
+
 ## Consequences
 - Till, shift, sale, and staff identities must be consistent across every transaction.
 - Open-shift resolution is needed when a staff member is deactivated or leaves.

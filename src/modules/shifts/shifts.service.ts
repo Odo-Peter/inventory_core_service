@@ -35,6 +35,8 @@ export class ShiftsService {
     principal: Principal,
     dto: ClockInDto,
   ): Promise<ShiftResponseDto> {
+    this.assertCanClockInOrOut(principal);
+
     const openShift = await this.prisma.shift.findFirst({
       where: {
         store_id: principal.store_id,
@@ -88,6 +90,8 @@ export class ShiftsService {
     principal: Principal,
     dto: ClockOutDto,
   ): Promise<ShiftResponseDto> {
+    this.assertCanClockInOrOut(principal);
+
     const openShift = await this.prisma.shift.findFirst({
       where: {
         store_id: principal.store_id,
@@ -110,6 +114,23 @@ export class ShiftsService {
           403,
           'not_shift_owner',
           'You can only close your own shift',
+        );
+      }
+
+      const previousShift = await this.prisma.shift.findFirst({
+        where: {
+          store_id: principal.store_id,
+          staff_id: principal.staff_id,
+        },
+        orderBy: { clock_in_at: 'desc' },
+        select: { id: true },
+      });
+
+      if (previousShift) {
+        throw new AppException(
+          409,
+          'shift_not_open',
+          'Shift is already closed',
         );
       }
 
@@ -265,6 +286,14 @@ export class ShiftsService {
     shiftId: string,
     dto: ForceCloseDto,
   ): Promise<ShiftResponseDto> {
+    if (principal.role !== 'manager' && principal.role !== 'admin') {
+      throw new AppException(
+        403,
+        'insufficient_role',
+        'You do not have permission to force-close shifts',
+      );
+    }
+
     const shift = await this.prisma.shift.findFirst({
       where: {
         id: shiftId,
@@ -287,7 +316,7 @@ export class ShiftsService {
       throw new AppException(
         403,
         'insufficient_role',
-        'Managers may only force-close cashier shifts',
+        'Managers can only force-close cashier shifts',
       );
     }
 
@@ -335,6 +364,16 @@ export class ShiftsService {
     });
 
     return toShiftResponse(closed);
+  }
+
+  private assertCanClockInOrOut(principal: Principal): void {
+    if (principal.role === 'admin') {
+      throw new AppException(
+        403,
+        'forbidden',
+        'Admins cannot start or close shifts. Use force-close instead.',
+      );
+    }
   }
 
   private openShiftConflict(): AppException {

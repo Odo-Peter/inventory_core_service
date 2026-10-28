@@ -337,6 +337,48 @@ describe('Authentication (e2e)', () => {
       .expect(401);
   });
 
+  it('deactivated staff cannot login with correct PIN and gets 403 account_deactivated with audit', async () => {
+    const cashier = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    await context.prisma.staff.update({
+      where: { id: cashier.id },
+      data: { active: false },
+    });
+
+    const response = await login(context.app, 'CASH001').expect(403);
+    expect(response.body.code).toBe('account_deactivated');
+
+    const audits = await context.prisma.auditLog.findMany({
+      where: { store_id: storeId, action: AUDIT_ACTIONS.loginFailed },
+      orderBy: { created_at: 'desc' },
+    });
+    expect(audits[0]?.details).toMatchObject({
+      staff_code: 'CASH001',
+      reason: 'account_deactivated',
+    });
+  });
+
+  it('deactivated staff with wrong PIN gets invalid credentials and does not reset lockout counters', async () => {
+    const cashier = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    await context.prisma.staff.update({
+      where: { id: cashier.id },
+      data: { active: false, failed_pin_attempts: 3 },
+    });
+
+    const response = await login(context.app, 'CASH001', '135790').expect(401);
+    expect(response.body.code).toBe('invalid_credentials');
+
+    const staff = await context.prisma.staff.findUniqueOrThrow({
+      where: { id: cashier.id },
+    });
+    expect(staff.failed_pin_attempts).toBe(4);
+  });
+
   it('applies role changes immediately from the database', async () => {
     const manager = await createStaff(context, storeId, {
       staffCode: 'MGR001',

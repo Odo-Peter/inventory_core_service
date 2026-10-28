@@ -15,6 +15,7 @@ The app is used in a shared-store environment with PIN login, multiple roles, an
 ### 1. Login and token issuance
 
 - Staff authenticate with `staff_code` + a 4–6 digit PIN via `POST /api/v1/auth/login`. Name-based selection is a UI convenience only; the API never exposes an unauthenticated list of staff. If a name picker is wanted, decide it together with ADR 0016 (device model).
+- Login flow order: resolve store, find staff by `store_id` + `staff_code` (if missing do timing-equalized dummy verification and record `loginFailed` with reason `unknown_staff_code` then throw generic `invalid_credentials`), check lockout (`423 account_locked`), **verify PIN before revealing deactivation**. If PIN is wrong record failure via `PinAttemptService` and throw generic `invalid_credentials` (same as today). If PIN is correct and `staff.active === false`, do **not** issue a token and do **not** reset `failed_pin_attempts` or `locked_until`; record an `auth.login_failed` audit with `details: { staff_code, reason: 'account_deactivated' }` and throw `AppException(403, 'account_deactivated', 'Your account has been deactivated. Contact an administrator.')`. Unknown/wrong-PIN behavior remains indistinguishable for probing safety.
 - On success the response body contains:
   ```json
   {
@@ -46,8 +47,8 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 
 1. Verifies signature, `exp`, `iss`, `aud`.
 2. Loads the `Staff` row by primary key **and** `store_id` from the token (one indexed lookup).
-3. Rejects with `401` if the staff member is missing, `active = false`, or `staff.token_version <> tv`.
-4. Builds the request principal `{ staff_id, store_id, role }` with the **role read from the database**, so role changes and deactivation take effect immediately.
+3. Rejects with `401` if the staff member is missing, `staff.store_id !== claims.store_id`, `staff.token_version !== tv`, or `staff.active === false`. When `staff.active` is false the guard throws `AppException(401, 'account_deactivated', 'Your account has been deactivated. Contact an administrator.')`; for missing staff or token version mismatch the existing `unauthorized` / `Invalid or revoked token` response is used.
+4. Builds the request principal `{ staff_id, store_id, role }` with the **role read from the database**, so role changes and deactivation take effect immediately. The guard selects `id, store_id, role, active, token_version, must_change_pin` in one query (no extra round trip). Public routes use `@Public()` as before. No `@AllowInactive()` bypass exists. Enforcement is at the auth boundary (not via Prisma middleware/extensions) so admin/audit/history can still read inactive records.
 
 `store_id` for every query comes from this principal, never from request input (ADR 0005). A second guard enforces `@Roles(...)` (see §6).
 
@@ -85,7 +86,10 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 | Capability                                                 | Cashier | Manager | Admin |
 | ---------------------------------------------------------- | :-----: | :-----: | :---: |
 | Create sales, record payments, view own sales and receipts |    ✔    |    ✔    |   ✔   |
-| Clock in/out of own shift                                  |    ✔    |    ✔    |   ✔   |
+| Start or normally close own shift                          |    ✔    |    ✔    |       |
+| Force-close a cashier shift                                |         |    ✔    |   ✔   |
+| Force-close a manager shift                                |         |         |   ✔   |
+| Force-close a legacy admin shift                           |         |         |   ✔   |
 | View all sales, shifts and shift summaries                 |         |    ✔    |   ✔   |
 | Stock receiving and adjustments                            |         |    ✔    |   ✔   |
 | Approve discounts and refunds †                            |         |    ✔    |   ✔   |
@@ -96,21 +100,25 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 | POS terminal and bank account setup †                      |         |    ✔    |   ✔   |
 | Staff management, roles, permissions                       |         |         |   ✔   |
 | Store settings, reports, audit log                         |         |         |   ✔   |
-| Force-close another staff member's open shift              |         |    ✔    |   ✔   |
 
 † Taken from the build plan; not stated in the previous ADR. ‡ **Conflict:** this ADR (previous revision) gives pricing to Admin, while the build plan says managers can edit prices. The table follows the ADR; confirm before implementing Phase 2.
 
 Additional rules:
 
+- Shift start and normal close are limited to Cashier and Manager for their own shift; Admins cannot start or normally close a shift. The force-close tiers are defined in ADR 0010.
+- A staff member's role cannot change while they have an open shift (`409 staff_has_open_shift`); close the shift first. This prevents an open shift from becoming unclosable by normal means.
 - Nobody changes their own role or deactivates themselves.
 - The last active Admin cannot be deactivated or demoted.
 - Approvals (discounts, refunds, unlocks) record both the requesting and approving staff ids in the audit log.
 
 ### 7. Account lifecycle
 
-- **Deactivation** sets `active = false` and increments `token_version`. The next request from any existing token fails, so the block is immediate.
-- **Reactivation** does not revive old tokens (the version was already incremented); the person must log in again.
+- **Deactivation is soft delete (deactivated = deleted from the user's point of view).** `UsersService.deactivate` sets `active = false` and increments `token_version` (and records `staff.deactivated`). No hard deletes of staff rows; shifts, audit logs, and sales remain linked. An admin can restore via `reactivate`.
+- **Reactivation** sets `active = true`, clears `failed_pin_attempts` and `locked_until` (does not change `must_change_pin`), and records `staff.reactivated`. It does not revive old tokens (the version was already incremented); the person must log in again.
 - **Staff leaving with an open shift:** deactivation returns `409` until a Manager or Admin force-closes the shift through an audited workflow (records who closed it, why, and the counted cash if available). The shift is never silently discarded.
+- **Auth enforcement:** all protected endpoints are covered at the auth boundary (guard/strategy) rejecting missing/invalid `store_id`, stale `token_version`, or `active === false`. `GET /api/v1/auth/me` is defensively protected as well. `AuthService.login` enforces deactivation only after successful PIN verification (to avoid account enumeration). 
+- **Restricted operations on inactive staff:** `resetPin`, `update`, and `unlock` on an inactive staff member throw `AppException(409, 'staff_inactive', 'Reactivate this staff member first')`. Staff code generation counts inactive staff (codes are never reused). The staff list continues to return inactive staff. No Prisma middleware/extension hides inactive staff (admin/audit/shift history need them).
+- **Error codes:** guard/inactive auth rejection → `401` `account_deactivated`; login with correct PIN on deactivated account → `403` `account_deactivated`; management actions on inactive target → `409` `staff_inactive`. Token version mismatch/missing/invalid → existing `401` `unauthorized` behavior retained.
 - Shared tills: switching staff is a logout followed by a fresh PIN login. The client auto-locks after an idle period (configurable, starting at 10 minutes) by clearing the stored token and showing the PIN screen. The cart stays local per ADR 0003.
 
 ### 8. Client rules for the stored token
