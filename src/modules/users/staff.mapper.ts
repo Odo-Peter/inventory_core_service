@@ -17,6 +17,12 @@ export interface StaffResponse {
   updated_at: Date;
 }
 
+export function staffDisplayName(
+  staff: Pick<StaffModel, 'first_name' | 'last_name'>,
+): string {
+  return `${staff.first_name} ${staff.last_name}`;
+}
+
 export function toStaffResponse(
   staff: StaffModel,
   now: Date = new Date(),
@@ -28,7 +34,7 @@ export function toStaffResponse(
     first_name: staff.first_name,
     last_name: staff.last_name,
     phone: staff.phone,
-    name: `${staff.first_name} ${staff.last_name}`,
+    name: staffDisplayName(staff),
     role: staff.role,
     active: staff.active,
     must_change_pin: staff.must_change_pin,

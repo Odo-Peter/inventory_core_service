@@ -58,7 +58,7 @@ These should already exist from earlier phases; add only what is missing, in a m
 | Shift summary | `Sale(shift_id)` |
 | Payments by method/day | `Payment(store_id, method, created_at)`, `Payment(sale_id)` |
 | Item history | `SaleItem(item_id)` |
-| Audit browsing | `AuditLog(store_id, created_at)` |
+| Audit browsing | `AuditLog(store_id, created_at)`; served by the Admin-only `GET /api/v1/audit-logs` read API |
 
 ## 6. Acceptance checklist
 

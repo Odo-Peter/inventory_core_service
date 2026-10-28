@@ -104,7 +104,7 @@
 - [ ] Create core models for Store, Staff, Till, Shift, Category, Item, PriceHistory, StockMovement, POSAccount, Sale, SaleItem, Payment, Receipt, and AuditLog.
 - [ ] Add supporting records for opening stock, receiving, stock counts, and device registration as needed.
 - [ ] Implement an append-only audit-writing service.
-- [ ] Restrict audit-log access to authorized Admins and Managers.
+- [ ] Restrict audit-log access to Admins and expose read-only listing only; Managers and Cashiers cannot read audit entries.
 - [ ] Ensure audit records never contain PINs, tokens, or secrets.
 - [ ] Add PostgreSQL integration tests for constraints and persistence.
 - [ ] Verify migrations against a fresh database.

@@ -171,6 +171,9 @@ model AuditLog {
 - `details` holds before/after JSON. Never include PINs, hashes, tokens, full phone numbers, email addresses or raw provider payloads. The service rejects forbidden keys (`pin`, `pin_hash`, `token`, `password`, `secret`, `pepper`, `phone`, `phone_number`, `email`) but permits masked phone keys (`phone_from`, `phone_to`).
 - `staff_id` is null for events with no known staff (e.g. login attempt with an unknown staff code).
 - Write the audit row **in the same transaction** as the change it describes. Failed-login events are written outside any rolled-back transaction.
+- Read access is Admin-only through `GET /api/v1/audit-logs`. It filters on `action`, `entity_type`, `entity_id`, `staff_id`, `from` (inclusive), `to` (exclusive), `limit` (default 25, maximum 100) and an opaque keyset `cursor`, ordered newest first by `(created_at, id)`. Results use the `{ data, next_cursor }` envelope.
+- List entries expose `id`, `created_at`, `action`, `entity_type`, `entity_id`, an optional actor summary and redacted `details`; they never expose `store_id` or raw staff records. `details` are redacted again on read (forbidden keys dropped recursively, only masked phone values retained), and incompatible values become `null`.
+- `GET /api/v1/audit-logs/actions` lists known action values for filter UIs. Reads are not audited and no create, update or delete routes are exposed.
 
 Audit actions introduced in this phase:
 
@@ -219,6 +222,7 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 - Clock-in creates a `Shift` for the authenticated Cashier or Manager; Admins are rejected at the controller guard and defensively in the service. Reject if the caller already has an open shift. Concurrent attempts are caught by the partial unique index and mapped to `409 staff_has_open_shift`.
 - Clock-out is only allowed for the shift owner, and only for a Cashier or Manager. With no own open shift, a caller gets `403 not_shift_owner` if any store shift is open, otherwise `409 shift_not_open` if they have a closed shift, or `409 no_open_shift` if they have never had one.
 - Manager+ list shifts with keyset pagination (`limit`, `cursor`), optional `staff_id`, and inclusive `from`/`to` dates interpreted in the store timezone.
+- Admins list audit entries with filters and keyset pagination. The cursor is validated before querying, malformed input returns `400 invalid_cursor`, and every query is scoped by `store_id` from auth with the actor loaded in the same query (no N+1).
 - Force-close is restricted to Manager/Admin at the guard. The service re-checks the caller role and enforces the target role: a Manager may only force-close Cashier shifts; an Admin may force-close any role. Missing or cross-store shifts return `404 shift_not_found`.
 - Role guard order: authenticate → resolve store → check role. Roles are `cashier < manager < admin`; `@Roles('manager')` means manager or above, and every route must be `@Public()` or carry `@Roles`. Shift start/close additionally deny `admin` at the guard, and each shift service method repeats its role check defensively.
 - Staff update rejects a role change while the target has an open shift (`409 staff_has_open_shift`).
@@ -246,6 +250,8 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 - [x] Admins cannot start or normally close shifts (`403 forbidden`) and force-close follows the Cashier/Manager/Admin matrix, with denied attempts leaving the shift open and unaudited.
 - [x] Role changes are rejected with `409 staff_has_open_shift` while the staff member has an open shift, and `deactivate` still blocks open shifts.
 - [x] `/auth/me` returns `active_shift_id: null` for Admins, including legacy open Admin shifts.
+- [x] Audit log reads are Admin-only, store-scoped, filterable, keyset-paginated, and never expose `store_id` or raw staff records.
+- [x] Audit details are redacted on read; inactive actors still resolve and no audit rows are written by reads.
 - [x] No Phase 2+ tables or columns were added.
 
 Run with `npm test` and `npm run test:e2e`. E2E tests require the migrated development database; they truncate `AuditLog`, `Shift`, `Staff` and `Store` between tests.

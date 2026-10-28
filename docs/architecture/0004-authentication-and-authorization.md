@@ -106,6 +106,7 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 Additional rules:
 
 - Shift start and normal close are limited to Cashier and Manager for their own shift; Admins cannot start or normally close a shift. The force-close tiers are defined in ADR 0010.
+- Audit log browsing is Admin-only. `GET /api/v1/audit-logs` and `GET /api/v1/audit-logs/actions` are read-only, store-scoped, and return no write operations.
 - A staff member's role cannot change while they have an open shift (`409 staff_has_open_shift`); close the shift first. This prevents an open shift from becoming unclosable by normal means.
 - Nobody changes their own role or deactivates themselves.
 - The last active Admin cannot be deactivated or demoted.
