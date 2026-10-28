@@ -28,10 +28,6 @@ function auditPath(
   return `/api/v1/audit-logs${suffix ? `?${suffix}` : ''}`;
 }
 
-function encodeCursor(value: unknown): string {
-  return Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-}
-
 describe('Audit logs (e2e)', () => {
   let context: TestContext;
   let storeId: string;
@@ -172,6 +168,12 @@ describe('Audit logs (e2e)', () => {
 
     expect(response.body.data).toHaveLength(1);
     expect(response.body.data[0].id).toBe(visible.id);
+    expect(response.body.meta).toEqual({
+      page: 1,
+      page_size: 25,
+      total: 1,
+      total_pages: 1,
+    });
     expect(Object.keys(response.body.data[0]).sort()).toEqual([
       'action',
       'actor',
@@ -283,14 +285,79 @@ describe('Audit logs (e2e)', () => {
       .expect((response) => {
         expect(response.body.code).toBe('invalid_date_range');
       });
+    for (const params of [
+      { page: 0 },
+      { page: -1 },
+      { page: 1.5 },
+      { page: 'abc' },
+      { page: 10_001 },
+      { page_size: 0 },
+      { page_size: 101 },
+      { page_size: 'abc' },
+      { cursor: 'not-a-cursor' },
+      { limit: 2 },
+    ]) {
+      await request(context.app.getHttpServer())
+        .get(auditPath(params))
+        .set(bearer(adminToken))
+        .expect(400);
+    }
+
     await request(context.app.getHttpServer())
-      .get(auditPath({ limit: 0 }))
+      .get(
+        auditPath({
+          action: 'not.an.action',
+          page: 1,
+          page_size: 2,
+        }),
+      )
       .set(bearer(adminToken))
       .expect(400);
-    await request(context.app.getHttpServer())
-      .get(auditPath({ limit: 101 }))
+  });
+
+  it('applies defaults and returns page metadata with a stable total', async () => {
+    for (let index = 0; index < 30; index += 1) {
+      await createAudit({
+        action: AUDIT_ACTIONS.staffCreated,
+        entity_type: 'DefaultPageTarget',
+      });
+    }
+
+    const filter = { action: AUDIT_ACTIONS.staffCreated };
+    const first = await request(context.app.getHttpServer())
+      .get(auditPath(filter))
       .set(bearer(adminToken))
-      .expect(400);
+      .expect(200);
+    const second = await request(context.app.getHttpServer())
+      .get(auditPath({ ...filter, page: 2 }))
+      .set(bearer(adminToken))
+      .expect(200);
+    const largerPage = await request(context.app.getHttpServer())
+      .get(auditPath({ ...filter, page: 1, page_size: 100 }))
+      .set(bearer(adminToken))
+      .expect(200);
+
+    expect(first.body.meta).toEqual({
+      page: 1,
+      page_size: 25,
+      total: 30,
+      total_pages: 2,
+    });
+    expect(second.body.meta).toEqual({
+      page: 2,
+      page_size: 25,
+      total: 30,
+      total_pages: 2,
+    });
+    expect(largerPage.body.meta).toEqual({
+      page: 1,
+      page_size: 100,
+      total: 30,
+      total_pages: 1,
+    });
+    expect(first.body.data).toHaveLength(25);
+    expect(second.body.data).toHaveLength(5);
+    expect(largerPage.body.data).toHaveLength(30);
   });
 
   it('paginates identical timestamps without gaps or duplicates', async () => {
@@ -306,29 +373,24 @@ describe('Audit logs (e2e)', () => {
       );
     }
 
-    const filter = { action: AUDIT_ACTIONS.staffCreated };
+    const filter = {
+      action: AUDIT_ACTIONS.staffCreated,
+      page_size: 2,
+    };
     const first = await request(context.app.getHttpServer())
-      .get(auditPath({ ...filter, limit: 2 }))
+      .get(auditPath({ ...filter, page: 1 }))
       .set(bearer(adminToken))
       .expect(200);
     const second = await request(context.app.getHttpServer())
-      .get(
-        auditPath({
-          ...filter,
-          limit: 2,
-          cursor: first.body.next_cursor,
-        }),
-      )
+      .get(auditPath({ ...filter, page: 2 }))
       .set(bearer(adminToken))
       .expect(200);
     const third = await request(context.app.getHttpServer())
-      .get(
-        auditPath({
-          ...filter,
-          limit: 2,
-          cursor: second.body.next_cursor,
-        }),
-      )
+      .get(auditPath({ ...filter, page: 3 }))
+      .set(bearer(adminToken))
+      .expect(200);
+    const beyond = await request(context.app.getHttpServer())
+      .get(auditPath({ ...filter, page: 4 }))
       .set(bearer(adminToken))
       .expect(200);
 
@@ -341,42 +403,81 @@ describe('Audit logs (e2e)', () => {
     expect(ids).toHaveLength(created.length);
     expect(new Set(ids).size).toBe(created.length);
     expect([...ids].sort()).toEqual(created.map((log) => log.id).sort());
-    expect(first.body.next_cursor).toBeTypeOf('string');
-    expect(second.body.next_cursor).toBeTypeOf('string');
-    expect(third.body.next_cursor).toBeNull();
-    expect(
-      JSON.parse(
-        Buffer.from(first.body.next_cursor, 'base64url').toString('utf8'),
-      ),
-    ).toMatchObject({
-      created_at: createdAt.toISOString(),
-      id: first.body.data[1].id,
+    expect([
+      first.body.data.length,
+      second.body.data.length,
+      third.body.data.length,
+    ]).toEqual([2, 2, 1]);
+    expect(first.body.meta).toEqual({
+      page: 1,
+      page_size: 2,
+      total: 5,
+      total_pages: 3,
     });
+    expect(third.body.meta).toEqual({
+      page: 3,
+      page_size: 2,
+      total: 5,
+      total_pages: 3,
+    });
+    expect(beyond.body.data).toEqual([]);
+    expect(beyond.body.meta).toEqual({
+      page: 4,
+      page_size: 2,
+      total: 5,
+      total_pages: 3,
+    });
+    expect(first.body).not.toHaveProperty('next_cursor');
   });
 
-  it('rejects malformed cursors', async () => {
-    const validId = '11111111-1111-4111-8111-111111111111';
-    const malformed = [
-      'not-a-cursor',
-      encodeCursor({}),
-      encodeCursor({ created_at: 'not-a-date', id: validId }),
-      encodeCursor({ created_at: new Date().toISOString(), id: 'not-a-uuid' }),
-      encodeCursor({
-        created_at: new Date().toISOString(),
-        id: validId,
-        extra: true,
-      }),
-    ];
+  it('paginates date-filtered rows with matching totals', async () => {
+    const inRange = new Date('2026-10-25T10:00:00.000Z');
+    const outOfRange = new Date('2026-10-27T10:00:00.000Z');
 
-    for (const cursor of malformed) {
-      await request(context.app.getHttpServer())
-        .get(auditPath({ cursor }))
-        .set(bearer(adminToken))
-        .expect(400)
-        .expect((response) => {
-          expect(response.body.code).toBe('invalid_cursor');
-        });
+    for (let index = 0; index < 5; index += 1) {
+      await createAudit({
+        action: AUDIT_ACTIONS.staffCreated,
+        entity_type: 'DatePageTarget',
+        created_at: inRange,
+      });
     }
+    for (let index = 0; index < 2; index += 1) {
+      await createAudit({
+        action: AUDIT_ACTIONS.staffCreated,
+        entity_type: 'DatePageTarget',
+        created_at: outOfRange,
+      });
+    }
+
+    const filter = {
+      entity_type: 'DatePageTarget',
+      from: '2026-10-25T00:00:00.000Z',
+      to: '2026-10-26T00:00:00.000Z',
+      page_size: 2,
+    };
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
+        request(context.app.getHttpServer())
+          .get(auditPath({ ...filter, page }))
+          .set(bearer(adminToken))
+          .expect(200),
+      ),
+    );
+
+    expect(pages.map((page) => page.body.data.length)).toEqual([2, 2, 1]);
+    expect(pages[0].body.meta).toEqual({
+      page: 1,
+      page_size: 2,
+      total: 5,
+      total_pages: 3,
+    });
+    expect(
+      new Set(
+        pages.flatMap((page) =>
+          page.body.data.map((row: { id: string }) => row.id),
+        ),
+      ).size,
+    ).toBe(5);
   });
 
   it('redacts sensitive details and still resolves inactive actors', async () => {
@@ -416,7 +517,7 @@ describe('Audit logs (e2e)', () => {
     });
 
     const response = await request(context.app.getHttpServer())
-      .get(auditPath({ limit: 100 }))
+      .get(auditPath({ page_size: 100 }))
       .set(bearer(adminToken))
       .expect(200);
 

@@ -6,6 +6,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { ApiPaginatedResponse } from '../../common/pagination/api-paginated-response.decorator.js';
 import { CurrentPrincipal } from '../auth/decorators/current-principal.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { Principal } from '../auth/principal.js';
@@ -13,6 +14,7 @@ import { AuditQueryService } from './audit-query.service.js';
 import {
   AuditLogActionsResponseDto,
   AuditLogListResponseDto,
+  AuditLogResponseDto,
 } from './dto/audit-log-response.dto.js';
 import { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto.js';
 
@@ -25,7 +27,7 @@ export class AuditController {
 
   @Get()
   @ApiOperation({ summary: 'List audit log entries for the current store' })
-  @ApiOkResponse({ type: AuditLogListResponseDto })
+  @ApiPaginatedResponse(AuditLogResponseDto)
   list(
     @CurrentPrincipal() principal: Principal,
     @Query() query: ListAuditLogsQueryDto,

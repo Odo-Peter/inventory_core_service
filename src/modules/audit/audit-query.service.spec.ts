@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { AppException } from '../../common/errors/app.exception.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { AUDIT_ACTIONS } from './audit-actions.js';
-import { decodeAuditCursor, encodeAuditCursor } from './audit-cursor.js';
 import { AuditQueryService } from './audit-query.service.js';
 import type { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto.js';
 
@@ -29,16 +28,33 @@ const LOG = {
   },
 };
 
-function createService(logs: unknown[] = [LOG]): {
+function createService(
+  logs: unknown[] = [LOG],
+  total = logs.length,
+): {
   service: AuditQueryService;
   findMany: ReturnType<typeof vi.fn>;
+  count: ReturnType<typeof vi.fn>;
+  transaction: ReturnType<typeof vi.fn>;
 } {
   const findMany = vi.fn().mockResolvedValue(logs);
+  const count = vi.fn().mockResolvedValue(total);
+  const transaction = vi
+    .fn()
+    .mockImplementation((operations: Promise<unknown>[]) =>
+      Promise.all(operations),
+    );
   const prisma = {
-    auditLog: { findMany },
+    auditLog: { findMany, count },
+    $transaction: transaction,
   } as unknown as PrismaService;
 
-  return { service: new AuditQueryService(prisma), findMany };
+  return {
+    service: new AuditQueryService(prisma),
+    findMany,
+    count,
+    transaction,
+  };
 }
 
 describe('AuditQueryService', () => {
@@ -48,19 +64,24 @@ describe('AuditQueryService', () => {
     expect(service.listActions()).toEqual(Object.values(AUDIT_ACTIONS));
   });
 
-  it('runs one scoped query and redacts details', async () => {
-    const { service, findMany } = createService();
+  it('uses page defaults, runs two scoped queries, and redacts details', async () => {
+    const { service, findMany, count, transaction } = createService();
 
-    const result = await service.list(PRINCIPAL, {});
+    const result = await service.list(PRINCIPAL, { page: 1, page_size: 25 });
 
-    expect(findMany).toHaveBeenCalledTimes(1);
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(transaction.mock.calls[0][0]).toHaveLength(2);
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { store_id: PRINCIPAL.store_id },
-        take: 26,
+        skip: 0,
+        take: 25,
         orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
       }),
     );
+    expect(count).toHaveBeenCalledWith({
+      where: { store_id: PRINCIPAL.store_id },
+    });
     expect(result).toEqual({
       data: [
         {
@@ -78,60 +99,33 @@ describe('AuditQueryService', () => {
           details: { fields: ['first_name'] },
         },
       ],
-      next_cursor: null,
+      meta: {
+        page: 1,
+        page_size: 25,
+        total: 1,
+        total_pages: 1,
+      },
     });
   });
 
-  it('paginates identical timestamps with an opaque cursor', async () => {
-    const secondLog = {
-      ...LOG,
-      id: '44444444-4444-4444-8444-444444444444',
-    };
-    const extraLog = {
-      ...LOG,
-      id: '55555555-5555-4555-8555-555555555555',
-    };
-    const { service, findMany } = createService([LOG, secondLog, extraLog]);
+  it('calculates skip, take, and metadata from the requested page', async () => {
+    const { service, findMany } = createService([LOG], 42);
 
-    const result = await service.list(PRINCIPAL, { limit: 2 });
+    const result = await service.list(PRINCIPAL, { page: 3, page_size: 10 });
 
-    expect(result.data.map((log) => log.id)).toEqual([LOG.id, secondLog.id]);
-    expect(result.next_cursor).toBeTypeOf('string');
-    expect(decodeAuditCursor(result.next_cursor as string)).toEqual({
-      created_at: secondLog.created_at,
-      id: secondLog.id,
-    });
-
-    const cursor = encodeAuditCursor({
-      created_at: secondLog.created_at,
-      id: secondLog.id,
-    });
-    findMany.mockResolvedValueOnce([]);
-
-    await service.list(PRINCIPAL, { limit: 2, cursor });
-
-    expect(findMany).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        where: {
-          store_id: PRINCIPAL.store_id,
-          AND: [
-            {
-              OR: [
-                { created_at: { lt: secondLog.created_at } },
-                {
-                  created_at: secondLog.created_at,
-                  id: { lt: secondLog.id },
-                },
-              ],
-            },
-          ],
-        },
-      }),
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 20, take: 10 }),
     );
+    expect(result.meta).toEqual({
+      page: 3,
+      page_size: 10,
+      total: 42,
+      total_pages: 5,
+    });
   });
 
-  it('applies filters and date bounds', async () => {
-    const { service, findMany } = createService([]);
+  it('uses the same filters for data and count', async () => {
+    const { service, findMany, count } = createService([]);
     const query: ListAuditLogsQueryDto = {
       action: AUDIT_ACTIONS.staffUpdated,
       entity_type: '  Staff  ',
@@ -139,43 +133,48 @@ describe('AuditQueryService', () => {
       staff_id: LOG.staff.id,
       from: '2026-10-25T00:00:00.000Z',
       to: '2026-10-26T00:00:00.000Z',
-      limit: 10,
+      page: 2,
+      page_size: 10,
     };
 
     await service.list(PRINCIPAL, query);
 
+    const expectedWhere = {
+      store_id: PRINCIPAL.store_id,
+      action: AUDIT_ACTIONS.staffUpdated,
+      entity_type: 'Staff',
+      entity_id: LOG.entity_id,
+      staff_id: LOG.staff.id,
+      created_at: {
+        gte: new Date('2026-10-25T00:00:00.000Z'),
+        lt: new Date('2026-10-26T00:00:00.000Z'),
+      },
+    };
+
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        take: 11,
-        where: {
-          store_id: PRINCIPAL.store_id,
-          action: AUDIT_ACTIONS.staffUpdated,
-          entity_type: 'Staff',
-          entity_id: LOG.entity_id,
-          staff_id: LOG.staff.id,
-          created_at: {
-            gte: new Date('2026-10-25T00:00:00.000Z'),
-            lt: new Date('2026-10-26T00:00:00.000Z'),
-          },
-        },
+        skip: 10,
+        take: 10,
+        where: expectedWhere,
       }),
     );
+    expect(count).toHaveBeenCalledWith({ where: expectedWhere });
   });
 
-  it('rejects invalid cursors and date ranges before querying', async () => {
-    const { service, findMany } = createService();
-
-    await expect(
-      service.list(PRINCIPAL, { cursor: 'not-a-cursor' }),
-    ).rejects.toBeInstanceOf(AppException);
+  it('rejects invalid date ranges before querying', async () => {
+    const { service, findMany, count, transaction } = createService();
 
     await expect(
       service.list(PRINCIPAL, {
         from: '2026-10-26T00:00:00.000Z',
         to: '2026-10-25T00:00:00.000Z',
+        page: 0,
+        page_size: 0,
       }),
     ).rejects.toBeInstanceOf(AppException);
 
     expect(findMany).not.toHaveBeenCalled();
+    expect(count).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
   });
 });

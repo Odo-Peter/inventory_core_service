@@ -1,19 +1,22 @@
 import { Injectable } from '@nestjs/common';
 
 import { AppException } from '../../common/errors/app.exception.js';
+import {
+  buildPageMeta,
+  DEFAULT_PAGE,
+  DEFAULT_PAGE_SIZE,
+  toSkipTake,
+} from '../../common/pagination/pagination.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import type { Principal } from '../auth/principal.js';
 import { AUDIT_ACTIONS } from './audit-actions.js';
-import { decodeAuditCursor, encodeAuditCursor } from './audit-cursor.js';
 import { toAuditLogResponse } from './audit-log.mapper.js';
 import type { ListAuditLogsQueryDto } from './dto/list-audit-logs-query.dto.js';
 import type {
   AuditLogListResponseDto,
   AuditLogResponseDto,
 } from './dto/audit-log-response.dto.js';
-
-const DEFAULT_PAGE_SIZE = 25;
 
 const AUDIT_LOG_SELECT = {
   id: true,
@@ -45,7 +48,8 @@ export class AuditQueryService {
     principal: Principal,
     query: ListAuditLogsQueryDto,
   ): Promise<AuditLogListResponseDto> {
-    const limit = query.limit ?? DEFAULT_PAGE_SIZE;
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.page_size ?? DEFAULT_PAGE_SIZE;
     const from = this.parseBoundary(query.from);
     const to = this.parseBoundary(query.to);
 
@@ -58,39 +62,22 @@ export class AuditQueryService {
     }
 
     const where = this.buildWhere(principal.store_id, query, from, to);
-    const cursor = query.cursor ? decodeAuditCursor(query.cursor) : null;
+    const { skip, take } = toSkipTake(page, pageSize);
 
-    if (cursor) {
-      where.AND = [
-        {
-          OR: [
-            { created_at: { lt: cursor.created_at } },
-            {
-              created_at: cursor.created_at,
-              id: { lt: cursor.id },
-            },
-          ],
-        },
-      ];
-    }
-
-    const logs = await this.prisma.auditLog.findMany({
-      where,
-      select: AUDIT_LOG_SELECT,
-      orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-      take: limit + 1,
-    });
-
-    const hasMore = logs.length > limit;
-    const page = hasMore ? logs.slice(0, limit) : logs;
-    const last = page[page.length - 1];
+    const [logs, total] = await this.prisma.$transaction([
+      this.prisma.auditLog.findMany({
+        where,
+        select: AUDIT_LOG_SELECT,
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
 
     return {
-      data: page.map((log): AuditLogResponseDto => toAuditLogResponse(log)),
-      next_cursor:
-        hasMore && last
-          ? encodeAuditCursor({ created_at: last.created_at, id: last.id })
-          : null,
+      data: logs.map((log): AuditLogResponseDto => toAuditLogResponse(log)),
+      meta: buildPageMeta(total, page, pageSize),
     };
   }
 

@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
 import type { ShiftCloseReason } from '../../../generated/prisma/enums.js';
 
 export class ShiftResponseDto {
@@ -46,10 +47,4 @@ export class ShiftResponseDto {
   updated_at: Date;
 }
 
-export class ShiftListResponseDto {
-  @ApiProperty({ type: [ShiftResponseDto] })
-  data: ShiftResponseDto[];
-
-  @ApiPropertyOptional({ nullable: true })
-  next_cursor: string | null;
-}
+export class ShiftListResponseDto extends PaginatedResponseDto<ShiftResponseDto> {}

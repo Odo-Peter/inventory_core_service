@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
+import { ApiPaginatedResponse } from '../../common/pagination/api-paginated-response.decorator.js';
 import { CurrentPrincipal } from '../auth/decorators/current-principal.decorator.js';
 import { DenyRoles } from '../auth/decorators/deny-roles.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
@@ -79,7 +80,7 @@ export class ShiftsController {
   @Roles('manager')
   @Get()
   @ApiOperation({ summary: 'List shifts' })
-  @ApiOkResponse({ type: ShiftListResponseDto })
+  @ApiPaginatedResponse(ShiftResponseDto)
   list(
     @CurrentPrincipal() principal: Principal,
     @Query() query: ListShiftsQueryDto,

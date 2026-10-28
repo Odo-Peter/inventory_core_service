@@ -8,7 +8,7 @@ Read `00-global-conventions.md` first.
 | Depends on | Phases 1–5 |
 | Models introduced | **None** |
 | Schema changes allowed | Indexes only, and only if missing |
-| Related ADRs | 0005, 0008, 0010 (daily close), 0011, 0014 |
+| Related ADRs | 0005, 0008, 0010 (daily close), 0011, 0014, 0017 (pagination) |
 | Nest modules | `shifts` (summaries), `sales` (history); a `reports` module is acceptable if the ADRs allow it |
 
 Do not add tables, columns or materialized views in this phase. Everything is derived from `Sale`, `SaleItem`, `Payment`, `Shift`, `Item`, `StockMovement` and `AuditLog`. When Phase 7 lands, the refund-related terms below begin to apply.
@@ -20,7 +20,7 @@ Do not add tables, columns or materialized views in this phase. Everything is de
 - Money is integer minor units. Sums over many rows can exceed 32-bit range: aggregate in SQL (`SUM` returns `bigint`) and cast to `bigint`/`BigInt` in code; serialise as strings or numbers per the API contract (ADR 0003).
 - Only finalized sales count as revenue: `status IN ('paid','partially_refunded','refunded')`. Drafts and voided sales are excluded. After Phase 7, net revenue subtracts refunds.
 - Use snapshot columns (`item_name_at_sale`, `sku_at_sale`, `unit_price_at_sale`) for history and top-item reports so catalog edits never change past figures.
-- Paginate with keyset pagination on `(paid_at DESC, id DESC)` for history lists.
+- Paginate with `page` (default 1, maximum 10,000) and `page_size` (default 25, maximum 100) per ADR 0017. History lists order by `(paid_at DESC, id DESC)` and return `data` plus `meta: { page, page_size, total, total_pages }`.
 
 ## 2. Shift summary and reconciliation
 

@@ -48,6 +48,9 @@ export class AuthGuard implements CanActivate {
         active: true,
         token_version: true,
         must_change_pin: true,
+        store: {
+          select: { timezone: true },
+        },
       },
     });
 
@@ -80,6 +83,7 @@ export class AuthGuard implements CanActivate {
       staff_id: staff.id,
       store_id: staff.store_id,
       role: staff.role,
+      timezone: staff.store?.timezone,
     };
 
     return true;

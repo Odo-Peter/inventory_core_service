@@ -26,6 +26,7 @@ This directory contains the agreed architecture decisions for the Inventory Web 
 | [0014](0014-monitoring-and-operations.md) | Monitoring and operational safety | Accepted |
 | [0015](0015-v1-scope-boundaries.md) | Explicit v1 scope boundaries | Accepted |
 | [0016](0016-device-model-and-access.md) | POS device and remote admin access | Accepted; registration mechanics need design |
+| [0017](0017-page-based-pagination.md) | Page-based pagination for list APIs | Accepted |
 
 ## Implementation prerequisites / unresolved decisions
 

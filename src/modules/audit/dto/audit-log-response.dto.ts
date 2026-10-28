@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
 import type { StaffRole } from '../../../generated/prisma/enums.js';
 
 export class AuditLogActorDto {
@@ -43,13 +44,7 @@ export class AuditLogResponseDto {
   details: Record<string, unknown> | null;
 }
 
-export class AuditLogListResponseDto {
-  @ApiProperty({ type: [AuditLogResponseDto] })
-  data: AuditLogResponseDto[];
-
-  @ApiPropertyOptional({ nullable: true })
-  next_cursor: string | null;
-}
+export class AuditLogListResponseDto extends PaginatedResponseDto<AuditLogResponseDto> {}
 
 export class AuditLogActionsResponseDto {
   @ApiProperty({ type: [String] })

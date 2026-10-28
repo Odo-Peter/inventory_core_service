@@ -10,6 +10,7 @@ The pilot prioritizes reliable transaction handling over offline operation.
 - v1 is online-only. A sale cannot be finalized without backend confirmation.
 - The backend is the source of truth.
 - Use REST endpoints under a versioned prefix such as `/api/v1`.
+- Paginated list endpoints use the shared `page`/`page_size` contract in ADR 0017.
 - Generate an OpenAPI specification from NestJS and generate frontend types/client from it.
 - Preserve backward compatibility where practical.
 - Provide clear connection and failure states. The cart may be retained locally where practical, but an unconfirmed sale must never be presented as completed.
