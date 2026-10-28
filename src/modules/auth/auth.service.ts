@@ -17,10 +17,7 @@ import { PinHasherService } from './pin-hasher.service.js';
 import { PinPolicy } from './pin-policy.js';
 import type { Principal } from './principal.js';
 import { TokenService, type AccessToken } from './token.service.js';
-import {
-  toStaffResponse,
-  type StaffResponse,
-} from '../users/staff.mapper.js';
+import { toStaffResponse, type StaffResponse } from '../users/staff.mapper.js';
 
 type AuthStaff = Pick<
   StaffResponse,
@@ -28,6 +25,7 @@ type AuthStaff = Pick<
   | 'name'
   | 'first_name'
   | 'last_name'
+  | 'staff_code'
   | 'role'
   | 'store_id'
   | 'must_change_pin'
@@ -315,6 +313,7 @@ export class AuthService {
       name: mapped.name,
       first_name: mapped.first_name,
       last_name: mapped.last_name,
+      staff_code: mapped.staff_code,
       role: mapped.role,
       store_id: mapped.store_id,
       must_change_pin: mapped.must_change_pin,
