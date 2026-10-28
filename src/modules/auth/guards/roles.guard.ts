@@ -4,6 +4,10 @@ import type { Request } from 'express';
 
 import type { StaffRole } from '../../../generated/prisma/enums.js';
 import { AppException } from '../../../common/errors/app.exception.js';
+import {
+  DENY_ROLES_KEY,
+  type DenyRolesMetadata,
+} from '../decorators/deny-roles.decorator.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import { ROLES_KEY } from '../decorators/roles.decorator.js';
 import { type Principal, ROLE_RANK } from '../principal.js';
@@ -44,6 +48,20 @@ export class RolesGuard implements CanActivate {
 
     if (!principal) {
       throw new AppException(401, 'unauthorized', 'Please sign in to continue');
+    }
+
+    const denial = this.reflector.getAllAndOverride<DenyRolesMetadata>(
+      DENY_ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (denial?.roles.includes(principal.role)) {
+      throw new AppException(
+        403,
+        denial.code,
+        denial.message ??
+          "You don't have permission to do that. Please ask an administrator if you need access.",
+      );
     }
 
     const requiredRank = Math.min(...roles.map((role) => ROLE_RANK[role]));

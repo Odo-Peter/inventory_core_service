@@ -86,7 +86,10 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 | Capability                                                 | Cashier | Manager | Admin |
 | ---------------------------------------------------------- | :-----: | :-----: | :---: |
 | Create sales, record payments, view own sales and receipts |    ✔    |    ✔    |   ✔   |
-| Clock in/out of own shift                                  |    ✔    |    ✔    |   ✔   |
+| Start or normally close own shift                          |    ✔    |    ✔    |       |
+| Force-close a cashier shift                                |         |    ✔    |   ✔   |
+| Force-close a manager shift                                |         |         |   ✔   |
+| Force-close a legacy admin shift                           |         |         |   ✔   |
 | View all sales, shifts and shift summaries                 |         |    ✔    |   ✔   |
 | Stock receiving and adjustments                            |         |    ✔    |   ✔   |
 | Approve discounts and refunds †                            |         |    ✔    |   ✔   |
@@ -97,12 +100,13 @@ A global `AuthGuard` runs on every route (deny by default). Routes opt out only 
 | POS terminal and bank account setup †                      |         |    ✔    |   ✔   |
 | Staff management, roles, permissions                       |         |         |   ✔   |
 | Store settings, reports, audit log                         |         |         |   ✔   |
-| Force-close another staff member's open shift              |         |    ✔    |   ✔   |
 
 † Taken from the build plan; not stated in the previous ADR. ‡ **Conflict:** this ADR (previous revision) gives pricing to Admin, while the build plan says managers can edit prices. The table follows the ADR; confirm before implementing Phase 2.
 
 Additional rules:
 
+- Shift start and normal close are limited to Cashier and Manager for their own shift; Admins cannot start or normally close a shift. The force-close tiers are defined in ADR 0010.
+- A staff member's role cannot change while they have an open shift (`409 staff_has_open_shift`); close the shift first. This prevents an open shift from becoming unclosable by normal means.
 - Nobody changes their own role or deactivates themselves.
 - The last active Admin cannot be deactivated or demoted.
 - Approvals (discounts, refunds, unlocks) record both the requesting and approving staff ids in the audit log.

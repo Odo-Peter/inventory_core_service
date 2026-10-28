@@ -178,6 +178,22 @@ export class UsersService {
 
     const updated = await this.prisma.$transaction(async (tx) => {
       if (data.role !== undefined) {
+        const openShifts = await tx.shift.count({
+          where: {
+            store_id: principal.store_id,
+            staff_id: target.id,
+            clock_out_at: null,
+          },
+        });
+
+        if (openShifts > 0) {
+          throw new AppException(
+            409,
+            'staff_has_open_shift',
+            'Close the open shift before changing this role',
+          );
+        }
+
         await this.assertNotLastActiveAdmin(target, tx);
       }
 

@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 
 import { CurrentPrincipal } from '../auth/decorators/current-principal.decorator.js';
+import { DenyRoles } from '../auth/decorators/deny-roles.decorator.js';
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { Principal } from '../auth/principal.js';
 import { ClockInDto } from './dto/clock-in.dto.js';
@@ -37,6 +38,9 @@ export class ShiftsController {
   constructor(private readonly shiftsService: ShiftsService) {}
 
   @Roles('cashier')
+  @DenyRoles(['admin'], {
+    message: 'Admins cannot start or close shifts. Use force-close instead.',
+  })
   @Post('clock-in')
   @ApiOperation({ summary: 'Open a shift' })
   @ApiCreatedResponse({ type: ShiftResponseDto })
@@ -48,6 +52,9 @@ export class ShiftsController {
   }
 
   @Roles('cashier')
+  @DenyRoles(['admin'], {
+    message: 'Admins cannot start or close shifts. Use force-close instead.',
+  })
   @Post('clock-out')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Close your open shift' })

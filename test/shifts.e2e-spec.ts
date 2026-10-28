@@ -125,7 +125,7 @@ describe('Shifts (e2e)', () => {
       .send({ closing_cash_counted: 0 })
       .expect(409)
       .expect((response) => {
-        expect(response.body.code).toBe('no_open_shift');
+        expect(response.body.code).toBe('shift_not_open');
       });
 
     const audits = await context.prisma.auditLog.findMany({
@@ -139,6 +139,158 @@ describe('Shifts (e2e)', () => {
       AUDIT_ACTIONS.shiftClockIn,
       AUDIT_ACTIONS.shiftClockOut,
     ]);
+  });
+
+  it('allows cashiers and managers to start shifts but rejects admins', async () => {
+    const managerShift = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(managerToken))
+      .send({ opening_float: 2_500 })
+      .expect(201);
+
+    expect(managerShift.body).toMatchObject({
+      staff_id: managerId,
+      opening_float: 2_500,
+      clock_out_at: null,
+    });
+
+    await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(managerToken))
+      .send({ opening_float: 0 })
+      .expect(409)
+      .expect((response) => {
+        expect(response.body.code).toBe('staff_has_open_shift');
+      });
+
+    const denied = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(adminToken))
+      .send({ opening_float: 0 })
+      .expect(403);
+
+    expect(denied.body).toMatchObject({
+      code: 'forbidden',
+      message: 'Admins cannot start or close shifts. Use force-close instead.',
+    });
+
+    expect(
+      await context.prisma.shift.count({
+        where: { staff_id: adminId, clock_out_at: null },
+      }),
+    ).toBe(0);
+    expect(
+      await context.prisma.auditLog.count({
+        where: {
+          store_id: storeId,
+          action: AUDIT_ACTIONS.shiftClockIn,
+          staff_id: adminId,
+        },
+      }),
+    ).toBe(0);
+
+    const cashierShift = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(cashierToken))
+      .send({ opening_float: 0 })
+      .expect(201);
+
+    expect(cashierShift.body.staff_id).toBe(cashierId);
+  });
+
+  it('allows owners to close normally, but blocks admins and non-owners', async () => {
+    const managerShift = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(managerToken))
+      .send({ opening_float: 1_000 })
+      .expect(201);
+
+    const closed = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-out')
+      .set(bearer(managerToken))
+      .send({ closing_cash_counted: 1_100 })
+      .expect(200);
+
+    expect(closed.body).toMatchObject({
+      id: managerShift.body.id,
+      staff_id: managerId,
+      closed_by_staff_id: managerId,
+      close_reason: 'normal',
+      closing_cash_counted: 1_100,
+    });
+
+    const legacyAdminShift = await context.prisma.shift.create({
+      data: {
+        store_id: storeId,
+        staff_id: adminId,
+        clock_in_at: new Date('2026-10-25T10:00:00.000Z'),
+      },
+    });
+
+    const adminDenied = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-out')
+      .set(bearer(adminToken))
+      .send({ closing_cash_counted: 0 })
+      .expect(403);
+
+    expect(adminDenied.body).toMatchObject({
+      code: 'forbidden',
+      message: 'Admins cannot start or close shifts. Use force-close instead.',
+    });
+
+    const legacyAdminAfter = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: legacyAdminShift.id },
+    });
+    expect(legacyAdminAfter.clock_out_at).toBeNull();
+
+    const otherManager = await createStaff(context, storeId, {
+      staffCode: 'MGR002',
+      role: 'manager',
+    });
+    const otherManagerToken = (await loginAs(context, 'MGR002')).token;
+    const otherManagerShift = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(otherManagerToken))
+      .send({ opening_float: 0 })
+      .expect(201);
+
+    await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-out')
+      .set(bearer(managerToken))
+      .send({ closing_cash_counted: 0 })
+      .expect(403)
+      .expect((response) => {
+        expect(response.body.code).toBe('not_shift_owner');
+      });
+
+    const otherManagerOpen = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: otherManagerShift.body.id },
+    });
+    expect(otherManagerOpen.clock_out_at).toBeNull();
+    expect(otherManagerOpen.staff_id).toBe(otherManager.id);
+
+    await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-out')
+      .set(bearer(otherManagerToken))
+      .send({ closing_cash_counted: 0 })
+      .expect(200);
+  });
+
+  it('returns a null active_shift_id for admins even with a legacy open shift', async () => {
+    await context.prisma.shift.create({
+      data: {
+        store_id: storeId,
+        staff_id: adminId,
+        clock_in_at: new Date('2026-10-25T10:00:00.000Z'),
+      },
+    });
+
+    const me = await request(context.app.getHttpServer())
+      .get('/api/v1/auth/me')
+      .set(bearer(adminToken))
+      .expect(200);
+
+    expect(me.body.active_shift_id).toBeNull();
   });
 
   it('prevents cashiers from closing someone else shift', async () => {
@@ -351,15 +503,15 @@ describe('Shifts (e2e)', () => {
     ).toEqual(['2026-10-25T22:30:00.000Z', '2026-10-24T23:30:00.000Z']);
   });
 
-  it('force-closes with the manager rules and records the audit', async () => {
-    const opened = await request(context.app.getHttpServer())
+  it('force-closes with the tiered role matrix and records the audit', async () => {
+    const cashierShift = await request(context.app.getHttpServer())
       .post('/api/v1/shifts/clock-in')
       .set(bearer(cashierToken))
       .send({ opening_float: 1_000 })
       .expect(201);
 
     const forced = await request(context.app.getHttpServer())
-      .post(`/api/v1/shifts/${opened.body.id}/force-close`)
+      .post(`/api/v1/shifts/${cashierShift.body.id}/force-close`)
       .set(bearer(managerToken))
       .send({ reason: 'Cashier left', closing_cash_counted: 900 })
       .expect(200);
@@ -372,7 +524,7 @@ describe('Shifts (e2e)', () => {
     });
 
     await request(context.app.getHttpServer())
-      .post(`/api/v1/shifts/${opened.body.id}/force-close`)
+      .post(`/api/v1/shifts/${cashierShift.body.id}/force-close`)
       .set(bearer(managerToken))
       .send({ reason: 'Again' })
       .expect(409)
@@ -384,7 +536,7 @@ describe('Shifts (e2e)', () => {
       where: {
         store_id: storeId,
         action: AUDIT_ACTIONS.shiftForceClosed,
-        entity_id: opened.body.id,
+        entity_id: cashierShift.body.id,
       },
     });
     expect(audit).not.toBeNull();
@@ -394,21 +546,6 @@ describe('Shifts (e2e)', () => {
       closed_by_staff_id: managerId,
     });
 
-    const adminShift = await request(context.app.getHttpServer())
-      .post('/api/v1/shifts/clock-in')
-      .set(bearer(adminToken))
-      .send({ opening_float: 0 })
-      .expect(201);
-
-    await request(context.app.getHttpServer())
-      .post(`/api/v1/shifts/${adminShift.body.id}/force-close`)
-      .set(bearer(managerToken))
-      .send({ reason: 'Not allowed' })
-      .expect(403)
-      .expect((response) => {
-        expect(response.body.code).toBe('insufficient_role');
-      });
-
     const managerShift = await request(context.app.getHttpServer())
       .post('/api/v1/shifts/clock-in')
       .set(bearer(managerToken))
@@ -417,8 +554,113 @@ describe('Shifts (e2e)', () => {
 
     await request(context.app.getHttpServer())
       .post(`/api/v1/shifts/${managerShift.body.id}/force-close`)
+      .set(bearer(managerToken))
+      .send({ reason: 'Own shift' })
+      .expect(403)
+      .expect((response) => {
+        expect(response.body.code).toBe('insufficient_role');
+        expect(response.body.message).toBe(
+          'Managers can only force-close cashier shifts',
+        );
+      });
+
+    const managerShiftOpen = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: managerShift.body.id },
+    });
+    expect(managerShiftOpen.clock_out_at).toBeNull();
+    expect(
+      await context.prisma.auditLog.count({
+        where: {
+          action: AUDIT_ACTIONS.shiftForceClosed,
+          entity_id: managerShift.body.id,
+        },
+      }),
+    ).toBe(0);
+
+    const adminShift = await context.prisma.shift.create({
+      data: {
+        store_id: storeId,
+        staff_id: adminId,
+        clock_in_at: new Date('2026-10-25T10:00:00.000Z'),
+      },
+    });
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${adminShift.id}/force-close`)
+      .set(bearer(managerToken))
+      .send({ reason: 'Not allowed' })
+      .expect(403)
+      .expect((response) => {
+        expect(response.body.code).toBe('insufficient_role');
+      });
+
+    const adminShiftOpen = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: adminShift.id },
+    });
+    expect(adminShiftOpen.clock_out_at).toBeNull();
+    expect(
+      await context.prisma.auditLog.count({
+        where: {
+          action: AUDIT_ACTIONS.shiftForceClosed,
+          entity_id: adminShift.id,
+        },
+      }),
+    ).toBe(0);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${managerShift.body.id}/force-close`)
       .set(bearer(adminToken))
       .send({ reason: 'Admin override' })
+      .expect(200);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${adminShift.id}/force-close`)
+      .set(bearer(adminToken))
+      .send({ reason: 'Legacy admin shift' })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body).toMatchObject({
+          close_reason: 'forced',
+          closed_by_staff_id: adminId,
+          closing_notes: 'Legacy admin shift',
+        });
+      });
+
+    const otherCashier = await createStaff(context, storeId, {
+      staffCode: 'CASH002',
+      role: 'cashier',
+    });
+    const otherCashierToken = (await loginAs(context, 'CASH002')).token;
+    const otherCashierShift = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(otherCashierToken))
+      .send({ opening_float: 0 })
+      .expect(201);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${otherCashierShift.body.id}/force-close`)
+      .set(bearer(otherCashierToken))
+      .send({ reason: 'Cashier cannot' })
+      .expect(403);
+
+    const otherCashierOpen = await context.prisma.shift.findUniqueOrThrow({
+      where: { id: otherCashierShift.body.id },
+    });
+    expect(otherCashierOpen.clock_out_at).toBeNull();
+    expect(otherCashier.id).toBe(otherCashierShift.body.staff_id);
+    expect(
+      await context.prisma.auditLog.count({
+        where: {
+          action: AUDIT_ACTIONS.shiftForceClosed,
+          entity_id: otherCashierShift.body.id,
+        },
+      }),
+    ).toBe(0);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${otherCashierShift.body.id}/force-close`)
+      .set(bearer(adminToken))
+      .send({ reason: 'Admin closes cashier shift' })
       .expect(200);
   });
 
@@ -462,6 +704,24 @@ describe('Shifts (e2e)', () => {
       .post('/api/v1/shifts/clock-in')
       .set(bearer(cashierToken))
       .send({ opening_float: 1.5 })
+      .expect(400);
+
+    const opened = await request(context.app.getHttpServer())
+      .post('/api/v1/shifts/clock-in')
+      .set(bearer(cashierToken))
+      .send({ opening_float: 0 })
+      .expect(201);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${opened.body.id}/force-close`)
+      .set(bearer(managerToken))
+      .send({})
+      .expect(400);
+
+    await request(context.app.getHttpServer())
+      .post(`/api/v1/shifts/${opened.body.id}/force-close`)
+      .set(bearer(managerToken))
+      .send({ reason: '' })
       .expect(400);
 
     expect(adminId).toBeTypeOf('string');

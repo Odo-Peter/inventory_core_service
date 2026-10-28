@@ -385,6 +385,55 @@ describe('Staff management (e2e)', () => {
     expect(audit).not.toBeNull();
   });
 
+  it('blocks role changes while the staff member has an open shift', async () => {
+    const target = await createStaff(context, storeId, {
+      staffCode: 'CASH001',
+      role: 'cashier',
+    });
+    const shift = await context.prisma.shift.create({
+      data: {
+        store_id: storeId,
+        staff_id: target.id,
+        clock_in_at: new Date('2026-10-25T11:00:00.000Z'),
+      },
+    });
+
+    await request(context.app.getHttpServer())
+      .patch(`/api/v1/staff/${target.id}`)
+      .set(bearer(adminToken))
+      .send({ role: 'manager' })
+      .expect(409)
+      .expect((response) => {
+        expect(response.body.code).toBe('staff_has_open_shift');
+        expect(response.body.message).toBe(
+          'Close the open shift before changing this role',
+        );
+      });
+
+    const unchanged = await context.prisma.staff.findUniqueOrThrow({
+      where: { id: target.id },
+    });
+    expect(unchanged.role).toBe('cashier');
+
+    await context.prisma.shift.update({
+      where: { id: shift.id },
+      data: {
+        clock_out_at: new Date('2026-10-25T12:00:00.000Z'),
+        close_reason: 'normal',
+        closed_by_staff_id: target.id,
+      },
+    });
+
+    await request(context.app.getHttpServer())
+      .patch(`/api/v1/staff/${target.id}`)
+      .set(bearer(adminToken))
+      .send({ role: 'manager' })
+      .expect(200)
+      .expect((response) => {
+        expect(response.body.role).toBe('manager');
+      });
+  });
+
   it('reactivates staff and allows login again; reactivate clears lockout', async () => {
     const target = await createStaff(context, storeId, {
       staffCode: 'CASH001',

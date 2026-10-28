@@ -147,6 +147,7 @@ model AuditLog {
 - `must_change_pin` blocks every authenticated route except change-PIN and logout (`403 pin_change_required`).
 - `token_version` is embedded in each JWT as `tv` and checked against the database on every request. Increment it on logout, PIN change/reset, deactivation, unlock and security revocation. Roles are read from the database on every request, so role changes and deactivation take effect immediately.
 - Deactivate with `active = false`; never hard-delete (history references staff). A staff member with an open shift cannot be deactivated (`409 staff_has_open_shift`).
+- Changing a staff member's role while they have an open shift is forbidden (`409 staff_has_open_shift`, "Close the open shift before changing this role"). The role may change once the shift is closed.
 - `role`, profile (`first_name`, `last_name`, `phone`) and deactivation/reactivation changes are audited. Profile updates record only the changed field names in `staff.updated`, with masked `phone_from`/`phone_to` when the phone changes; full phone numbers and PIN material are never written to the audit log. Promoting a Cashier to Manager or Admin sets `must_change_pin = true` so the new 6-digit PIN rule is enforced. The last active Admin cannot be demoted (`409 last_admin`); self-deactivation is forbidden (`403 forbidden`) and is audited for every other target.
 - Manager/Admin reset/unlock requires the caller's own PIN as `acting_pin`; a Manager may only reset/unlock Cashiers.
 
@@ -154,8 +155,10 @@ model AuditLog {
 
 - Money fields are integer minor units.
 - A shift is **open** while `clock_out_at IS NULL`. At most one open shift exists per staff member (DB partial unique index).
-- Normal clock-out sets `clock_out_at`, `closing_cash_counted`, `closed_by_staff_id = staff_id` and `close_reason = normal`.
-- Manager/Admin force-close sets `closed_by_staff_id` to the caller, `close_reason = forced`, stores the reason in `closing_notes`, and is audited. A Manager may force-close only Cashier shifts; an Admin may force-close any role. Closed shifts are immutable through this endpoint (`409 shift_not_open`).
+- Cashier and Manager may start and normally close **their own** shift. Admins cannot start or normally close a shift (`403 forbidden`); they use force-close instead. Normal close remains self-only.
+- Normal clock-out sets `clock_out_at`, `closing_cash_counted`, `closed_by_staff_id = staff_id` and `close_reason = normal`. Closing an already-closed own shift returns `409 shift_not_open`.
+- Force-close uses the dedicated endpoint and keeps the tiered rule: a Manager may force-close only Cashier shifts; an Admin may force-close any role. A Cashier cannot force-close. It sets `closed_by_staff_id` to the caller, `close_reason = forced`, stores the reason in `closing_notes`, and is audited. Closed shifts are immutable through this endpoint (`409 shift_not_open`).
+- A legacy open Admin shift from before this restriction is not auto-closed and has no migration. The Admin can force-close it; `/auth/me` still reports `active_shift_id: null` for Admins.
 - Expected cash and variance are **computed, never stored**:
   - `expected_cash = opening_float + cash payments − cash refunds` (payments/refunds arrive in Phases 4–7)
   - `variance = closing_cash_counted − expected_cash` (positive = overage)
@@ -213,11 +216,13 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 
 - `store_id` always comes from the JWT/auth context. Login resolves exactly one active store in the pilot; zero or multiple active stores return `500 configuration_error`.
 - Login/change-PIN run through the `ip` and `code` throttlers (defaults 10/min per IP, 5/min per `staff_code`). Unknown codes verify against a dummy hash so timing matches a wrong PIN.
-- Clock-in creates a `Shift` for the authenticated staff; reject if they already have an open shift. Concurrent attempts are caught by the partial unique index and mapped to `409 staff_has_open_shift`.
-- Clock-out is only allowed for the shift owner. With no own open shift, a caller gets `403 not_shift_owner` if any store shift is open, otherwise `409 no_open_shift`.
+- Clock-in creates a `Shift` for the authenticated Cashier or Manager; Admins are rejected at the controller guard and defensively in the service. Reject if the caller already has an open shift. Concurrent attempts are caught by the partial unique index and mapped to `409 staff_has_open_shift`.
+- Clock-out is only allowed for the shift owner, and only for a Cashier or Manager. With no own open shift, a caller gets `403 not_shift_owner` if any store shift is open, otherwise `409 shift_not_open` if they have a closed shift, or `409 no_open_shift` if they have never had one.
 - Manager+ list shifts with keyset pagination (`limit`, `cursor`), optional `staff_id`, and inclusive `from`/`to` dates interpreted in the store timezone.
-- Manager+ force-close is subject to the Manager/Cashier role rule; missing or cross-store shifts return `404 shift_not_found`.
-- Role guard order: authenticate → resolve store → check role. Roles are `cashier < manager < admin`; `@Roles('manager')` means manager or above, and every route must be `@Public()` or carry `@Roles`.
+- Force-close is restricted to Manager/Admin at the guard. The service re-checks the caller role and enforces the target role: a Manager may only force-close Cashier shifts; an Admin may force-close any role. Missing or cross-store shifts return `404 shift_not_found`.
+- Role guard order: authenticate → resolve store → check role. Roles are `cashier < manager < admin`; `@Roles('manager')` means manager or above, and every route must be `@Public()` or carry `@Roles`. Shift start/close additionally deny `admin` at the guard, and each shift service method repeats its role check defensively.
+- Staff update rejects a role change while the target has an open shift (`409 staff_has_open_shift`).
+- `/auth/me` returns `active_shift_id: null` for Admins, including when an Admin has a legacy open shift.
 - Login, change-PIN and `/auth/me` responses use the same staff mapper output (or a trimmed subset: `id`, `name`, `first_name`, `last_name`, `role`, `store_id`, `must_change_pin`). PIN hashes, attempt counters and token versions never leave the server.
 
 ## 5. Seed data
@@ -238,6 +243,9 @@ E2E test cleanup must use `TRUNCATE` (row triggers do not fire on it) rather tha
 - [x] Second concurrent wrong PIN cannot over-increment the attempt counter.
 - [x] `UPDATE`/`DELETE` on `AuditLog` raises.
 - [x] Manager/Admin reset/unlock, token invalidation and last-admin protection are covered by e2e tests.
+- [x] Admins cannot start or normally close shifts (`403 forbidden`) and force-close follows the Cashier/Manager/Admin matrix, with denied attempts leaving the shift open and unaudited.
+- [x] Role changes are rejected with `409 staff_has_open_shift` while the staff member has an open shift, and `deactivate` still blocks open shifts.
+- [x] `/auth/me` returns `active_shift_id: null` for Admins, including legacy open Admin shifts.
 - [x] No Phase 2+ tables or columns were added.
 
 Run with `npm test` and `npm run test:e2e`. E2E tests require the migrated development database; they truncate `AuditLog`, `Shift`, `Staff` and `Store` between tests.

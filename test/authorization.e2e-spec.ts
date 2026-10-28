@@ -54,7 +54,7 @@ const ROLE_CASES: RoleCase[] = [
     method: 'post',
     path: () => '/api/v1/shifts/clock-in',
     body: () => ({ opening_float: 0 }),
-    expected: { cashier: 201, manager: 201, admin: 201 },
+    expected: { cashier: 201, manager: 201, admin: 403 },
   },
   {
     name: 'GET /staff',

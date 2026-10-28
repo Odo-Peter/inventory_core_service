@@ -193,14 +193,17 @@ export class AuthService {
       );
     }
 
-    const openShift = await this.prisma.shift.findFirst({
-      where: {
-        store_id: principal.store_id,
-        staff_id: principal.staff_id,
-        clock_out_at: null,
-      },
-      select: { id: true },
-    });
+    const openShift =
+      staff.role === 'admin'
+        ? null
+        : await this.prisma.shift.findFirst({
+            where: {
+              store_id: principal.store_id,
+              staff_id: principal.staff_id,
+              clock_out_at: null,
+            },
+            select: { id: true },
+          });
 
     return {
       ...this.toAuthStaff(staff),
