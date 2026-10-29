@@ -2,8 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   ParseUUIDPipe,
   Post,
@@ -65,7 +63,6 @@ export class InventoryController {
   }
 
   @Post('items/:id/adjust')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Adjust stock by a signed quantity' })
   @ApiOkResponse({ type: StockMovementResponseDto })
   adjust(

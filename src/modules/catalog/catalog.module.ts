@@ -10,6 +10,7 @@ import { ItemsController } from './items.controller.js';
 import { ItemsService } from './items.service.js';
 import { IMAGE_STORAGE } from './image/image-storage.js';
 import { createImageStorage } from './image/image-storage.provider.js';
+import { ImageProcessor } from './image/image-processor.js';
 
 @Module({
   imports: [AuditModule],
@@ -18,10 +19,12 @@ import { createImageStorage } from './image/image-storage.provider.js';
     CategoriesService,
     ItemsService,
     ItemImagesService,
+    ImageProcessor,
     {
       provide: IMAGE_STORAGE,
       inject: [APP_CONFIG],
-      useFactory: (config: AppConfig) => createImageStorage(config.imageStorage),
+      useFactory: (config: AppConfig) =>
+        createImageStorage(config.imageStorage),
     },
   ],
 })
