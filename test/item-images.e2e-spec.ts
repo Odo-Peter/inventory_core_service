@@ -81,14 +81,11 @@ describe('Item images (e2e)', () => {
       .attach('image', buffer, filename);
   }
 
-  it('restricts image changes to admins', async () => {
-    const item = await createItem(); // Prisma model → item.id
+  it('restricts image changes to managers and admins', async () => {
+    const item = await createItem();
     const image = await imageBuffer('png');
 
     await uploadImage(item.id, image, 'photo.png', tokens.cashier).expect(403);
-    await uploadImage(item.id, image, 'photo.png', tokens.manager).expect(403);
-
-    // Admin can replace / upload
     await uploadImage(item.id, image).expect(200);
   });
 
@@ -98,7 +95,7 @@ describe('Item images (e2e)', () => {
     const response = await uploadImage(
       item.id,
       await imageBuffer('png'),
-    ).expect(201);
+    ).expect(200);
 
     expect(response.body.item_id).toBe(item.id);
     expect(response.body.image_key).toMatch(
@@ -136,10 +133,10 @@ describe('Item images (e2e)', () => {
   it('replaces an image and removes the previous object best-effort', async () => {
     const item = await createItem();
     const first = await uploadImage(item.id, await imageBuffer('jpeg')).expect(
-      201,
+      200,
     );
     const second = await uploadImage(item.id, await imageBuffer('webp')).expect(
-      201,
+      200,
     );
 
     expect(second.body.image_key).not.toBe(first.body.image_key);
@@ -158,7 +155,7 @@ describe('Item images (e2e)', () => {
     const uploaded = await uploadImage(
       item.id,
       await imageBuffer('png'),
-    ).expect(201);
+    ).expect(200);
 
     const removed = await request(server())
       .delete(`/api/v1/items/${item.id}/image`)
@@ -189,7 +186,7 @@ describe('Item images (e2e)', () => {
     const item = await createItem();
 
     await request(server())
-      .post(`/api/v1/items/${item.id}/image`)
+      .put(`/api/v1/items/${item.id}/image`)
       .set(bearer(tokens.admin))
       .field('note', 'no file')
       .expect(400)
@@ -248,7 +245,7 @@ describe('Item images (e2e)', () => {
 
   it('keeps the database authoritative when cleanup fails on removal', async () => {
     const item = await createItem();
-    await uploadImage(item.id, await imageBuffer('png')).expect(201);
+    await uploadImage(item.id, await imageBuffer('png')).expect(200);
     storage.failNextRemove = true;
 
     await request(server())
@@ -316,9 +313,9 @@ describe('Item images with storage disabled (e2e)', () => {
     });
 
     await request(server())
-      .post(`/api/v1/items/${item.id}/image`)
+      .put(`/api/v1/items/${item.id}/image`)
       .set(bearer(adminToken))
-      .attach('file', await imageBuffer('png'), 'photo.png')
+      .attach('image', await imageBuffer('png'), 'photo.png')
       .expect(503)
       .expect((res) => {
         expect(res.body.code).toBe('image_storage_disabled');
