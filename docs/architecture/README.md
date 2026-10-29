@@ -27,6 +27,8 @@ This directory contains the agreed architecture decisions for the Inventory Web 
 | [0015](0015-v1-scope-boundaries.md) | Explicit v1 scope boundaries | Accepted |
 | [0016](0016-device-model-and-access.md) | POS device and remote admin access | Accepted; registration mechanics need design |
 | [0017](0017-page-based-pagination.md) | Page-based pagination for list APIs | Accepted |
+| [0018](0018-catalog-inventory-boundaries.md) | Catalog and inventory boundaries | Accepted |
+| [0019](0019-item-image-storage.md) | Item image storage | Accepted |
 
 ## Implementation prerequisites / unresolved decisions
 

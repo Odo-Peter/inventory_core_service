@@ -7,6 +7,7 @@ import { configureApp } from '../../src/app.setup.js';
 import { CLOCK, type Clock } from '../../src/common/clock.js';
 import { APP_CONFIG, type AppConfig } from '../../src/config/app-config.js';
 import { PinHasherService } from '../../src/modules/auth/pin-hasher.service.js';
+import { IMAGE_STORAGE, type ImageStorage } from '../../src/modules/catalog/image/image-storage.js';
 import { PrismaService } from '../../src/prisma/prisma.service.js';
 import {
   authHeader,
@@ -59,24 +60,35 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     lockoutMinutes: [5, 15, 60],
     loginThrottleIpPerMin: 10_000,
     loginThrottleCodePerMin: 10_000,
+    imageStorage: { driver: 'disabled' },
     ...overrides,
   };
 }
 
+export interface CreateTestAppOptions {
+  imageStorage?: ImageStorage;
+}
+
 export async function createTestApp(
   overrides: Partial<AppConfig> = {},
+  options: CreateTestAppOptions = {},
 ): Promise<TestContext> {
   const config = testConfig(overrides);
   const clock = new FakeClock(new Date('2026-10-25T12:00:00.000Z'));
 
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(APP_CONFIG)
     .useValue(config)
     .overrideProvider(CLOCK)
-    .useValue(clock)
-    .compile();
+    .useValue(clock);
+
+  if (options.imageStorage) {
+    builder.overrideProvider(IMAGE_STORAGE).useValue(options.imageStorage);
+  }
+
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication();
   configureApp(app, config);

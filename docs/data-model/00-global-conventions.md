@@ -9,6 +9,13 @@ Applies to every phase. OpenCode must follow these rules for schema, DTOs, and s
 - API: NestJS
 - Pilot: single store, multi-store-ready via `store_id`
 
+## Vocabulary: Catalog versus Inventory
+
+- **Catalog** = what the store sells: categories, item descriptive/commercial data (name, SKU, barcode, unit, prices, reorder threshold, active flag, image), and price history.
+- **Inventory** = how much the store has and why it changed: stock movements, the stock quantity cache, receiving, adjustments, damage, and reconciliation.
+- `Item` is one table holding both. `stock_quantity` and `reorder_threshold` are inventory-related fields on it; everything else is catalog data.
+- Catalog and inventory are separate modules with separate services and role rules. See ADR 0018.
+
 ## IDs
 
 - Primary keys are UUIDs:
@@ -68,8 +75,9 @@ Applies to every phase. OpenCode must follow these rules for schema, DTOs, and s
 | Staff                                       | auth/`users` aligned to Staff (do not invent parallel User+Staff tables) |
 | Shift                                       | `shifts`                                                                 |
 | AuditLog                                    | `audit`                                                                  |
-| Category, Item, PriceHistory, StockMovement | `inventory`                                                              |
-| POSAccount                                  | `payments` or admin inventory submodule                                  |
+| Category, Item, PriceHistory                | `catalog`                                                                |
+| StockMovement                               | `inventory`                                                              |
+| POSAccount                                  | `payments`                                                               |
 | Sale, SaleItem                              | `sales`                                                                  |
 | Payment, Receipt, PaymentTransaction        | `payments`                                                               |
 | Refund, RefundItem                          | `sales` or `payments` (choose one consistently)                          |

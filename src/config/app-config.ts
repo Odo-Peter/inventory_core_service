@@ -2,6 +2,15 @@ import 'dotenv/config';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
+export type ImageStorageDriver = 'disabled' | 'cloudinary';
+
+export interface ImageStorageConfig {
+  driver: ImageStorageDriver;
+  cloudName?: string;
+  apiKey?: string;
+  apiSecret?: string;
+}
+
 export interface AppConfig {
   nodeEnv: string;
   port: number;
@@ -15,6 +24,7 @@ export interface AppConfig {
   lockoutMinutes: number[];
   loginThrottleIpPerMin: number;
   loginThrottleCodePerMin: number;
+  imageStorage: ImageStorageConfig;
 }
 
 const DEFAULT_ACCESS_TTL = '8h';
@@ -83,6 +93,27 @@ function parseCsvIntegers(name: string, value: string): number[] {
   }
 
   return parts.map((part) => parsePositiveInteger(name, part));
+}
+
+function parseImageStorage(env: NodeJS.ProcessEnv): ImageStorageConfig {
+  const driver = (env.IMAGE_STORAGE_DRIVER?.trim() ||
+    'disabled') as ImageStorageDriver;
+
+  if (driver === 'disabled') {
+    return { driver };
+  }
+  if (driver !== 'cloudinary') {
+    throw new Error(
+      'IMAGE_STORAGE_DRIVER must be either "disabled" or "cloudinary"',
+    );
+  }
+
+  return {
+    driver,
+    cloudName: requireValue(env, 'CLOUDINARY_CLOUD_NAME'),
+    apiKey: requireValue(env, 'CLOUDINARY_API_KEY'),
+    apiSecret: requireValue(env, 'CLOUDINARY_API_SECRET'),
+  };
 }
 
 function parseCorsOrigins(env: NodeJS.ProcessEnv, nodeEnv: string): string[] {
@@ -154,5 +185,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       env.LOGIN_THROTTLE_CODE_PER_MIN?.trim() ||
         DEFAULT_LOGIN_THROTTLE_CODE_PER_MIN,
     ),
+    imageStorage: parseImageStorage(env),
   };
 }
