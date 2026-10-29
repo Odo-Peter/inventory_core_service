@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -69,6 +69,7 @@ export class CreateItemDto {
   unit: string;
 
   @ApiProperty({ description: 'Selling price in integer minor units' })
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   current_price: number;
@@ -78,18 +79,21 @@ export class CreateItemDto {
     nullable: true,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   cost_price?: number | null;
 
   @ApiPropertyOptional({ default: 0 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   reorder_threshold?: number;
 
   @ApiPropertyOptional({ default: true })
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   active?: boolean;
 }

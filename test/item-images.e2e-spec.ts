@@ -10,29 +10,11 @@ import {
   createStaff,
   createStore,
   createTestApp,
+  imageBuffer,
   loginAs,
   truncateAll,
   type TestContext,
 } from './helpers/test-app.js';
-
-async function imageBuffer(
-  format: 'png' | 'jpeg' | 'webp',
-): Promise<Buffer> {
-  const pipeline = sharp({
-    create: {
-      width: 32,
-      height: 24,
-      channels: 3,
-      background: { r: 200, g: 40, b: 60 },
-    },
-  });
-
-  return format === 'png'
-    ? pipeline.png().toBuffer()
-    : format === 'jpeg'
-      ? pipeline.jpeg().toBuffer()
-      : pipeline.webp().toBuffer();
-}
 
 describe('Item images (e2e)', () => {
   let context: TestContext;
@@ -45,10 +27,7 @@ describe('Item images (e2e)', () => {
 
   beforeAll(async () => {
     storage = new MemoryImageStorage();
-    context = await createTestApp(
-      {},
-      { imageStorage: storage },
-    );
+    context = await createTestApp({}, { imageStorage: storage });
   });
 
   afterAll(async () => {
@@ -97,19 +76,20 @@ describe('Item images (e2e)', () => {
     token = tokens.admin,
   ) {
     return request(server())
-      .post(`/api/v1/items/${itemId}/image`)
+      .put(`/api/v1/items/${itemId}/image`)
       .set(bearer(token))
-      .attach('file', buffer, filename);
+      .attach('image', buffer, filename);
   }
 
   it('restricts image changes to admins', async () => {
-    const item = await createItem();
+    const item = await createItem(); // Prisma model → item.id
     const image = await imageBuffer('png');
 
     await uploadImage(item.id, image, 'photo.png', tokens.cashier).expect(403);
     await uploadImage(item.id, image, 'photo.png', tokens.manager).expect(403);
 
-    await uploadImage(item.id, image).expect(201);
+    // Admin can replace / upload
+    await uploadImage(item.id, image).expect(200);
   });
 
   it('stores one key, converts to WebP, and returns sized variants', async () => {
@@ -175,9 +155,10 @@ describe('Item images (e2e)', () => {
 
   it('removes an image idempotently and audits only the first removal', async () => {
     const item = await createItem();
-    const uploaded = await uploadImage(item.id, await imageBuffer('png')).expect(
-      201,
-    );
+    const uploaded = await uploadImage(
+      item.id,
+      await imageBuffer('png'),
+    ).expect(201);
 
     const removed = await request(server())
       .delete(`/api/v1/items/${item.id}/image`)
@@ -285,9 +266,8 @@ describe('Item images (e2e)', () => {
   });
 
   it('treats a cross-store item as not found', async () => {
-    const otherStoreId = (
-      await createStore(context.prisma, { name: 'Other' })
-    ).id;
+    const otherStoreId = (await createStore(context.prisma, { name: 'Other' }))
+      .id;
     const otherItem = await createItem(otherStoreId);
 
     await uploadImage(otherItem.id, await imageBuffer('png')).expect(404);
