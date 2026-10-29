@@ -508,4 +508,44 @@ describe('Catalog (e2e)', () => {
     );
     expect(storage.uploads).toContain(res.body.image_key);
   });
+
+  it('does not create an item when image upload fails', async () => {
+    const image = await imageBuffer('png');
+
+    // Force the next upload to fail
+    storage.failNextUpload = true;
+
+    const beforeCount = await context.prisma.item.count({
+      where: { store_id: storeId },
+    });
+
+    await request(server())
+      .post('/api/v1/items')
+      .set(bearer(tokens.admin))
+      .field('name', 'Should not be created')
+      .field('unit', 'piece')
+      .field('current_price', '1000')
+      .attach('image', image, 'photo.png')
+      .expect(503);
+
+    // No item was written
+    const afterCount = await context.prisma.item.count({
+      where: { store_id: storeId },
+    });
+    expect(afterCount).toBe(beforeCount);
+
+    // Nothing left in storage either
+    expect(storage.uploads).toHaveLength(0);
+    expect(storage.objects.size).toBe(0);
+
+    // No audit entry for a non-existent item
+    expect(
+      await context.prisma.auditLog.count({
+        where: {
+          action: 'item.created',
+          details: { path: ['name'], equals: 'Should not be created' },
+        },
+      }),
+    ).toBe(0);
+  });
 });
