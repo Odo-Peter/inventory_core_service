@@ -99,14 +99,6 @@ export class CreateItemDto {
 }
 
 export class UpdateItemDto {
-  @ApiPropertyOptional({ example: 'COKE-50CL' })
-  @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(64)
-  sku?: string;
-
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @Transform(emptyToNull)

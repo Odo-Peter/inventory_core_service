@@ -21,7 +21,8 @@ import { CurrentPrincipal } from '../auth/decorators/current-principal.decorator
 import { Roles } from '../auth/decorators/roles.decorator.js';
 import type { Principal } from '../auth/principal.js';
 import { CategoriesService } from './categories.service.js';
-import type { ListCategoriesQueryDto } from './dto/catalog-query.dto.js';
+
+import { ListCategoriesQueryDto } from './dto/catalog-query.dto.js';
 import {
   CategoryListResponseDto,
   CategoryResponseDto,

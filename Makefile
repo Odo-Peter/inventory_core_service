@@ -22,7 +22,7 @@ help:
 	@echo "  make install       Install dependencies"
 	@echo "  make build         Build the application"
 	@echo "  make start         Start the application (once)"
-	@echo "  make dev           Start in development mode (watch)"
+	@echo "  make dev           Start DB (if needed), apply pending migrations, then start in watch mode"
 	@echo "  make debug         Start in debug + watch mode"
 	@echo "  make prod          Start production build"
 	@echo ""
@@ -52,9 +52,8 @@ help:
 	@echo "  make db-migrate name=foo      Create a named migration (migrate dev --name)"
 	@echo "  make db-migrate-deploy        Apply migrations (production)"
 	@echo "  make db-migrate-status        Show migration status"
-	@echo "  make db-seed              Seed admin details from .env"
-	@echo "  make db-reset             Interactive Reset - NOTE: All data in the database will be erased."
-	@echo ""
+	@echo "  make db-seed                  Seed admin details from .env"
+	@echo "  make db-reset                 Interactive Reset - NOTE: All data will be erased."@echo ""
 	@echo "Other"
 	@echo "  make deploy        Deploy the application"
 	@echo "  make clean         Remove build artifacts"
@@ -83,8 +82,24 @@ build:
 start:
 	npm run start
 
-dev: db-ensure
+# Ensure DB is up → apply pending migrations → generate client → start watch mode.
+# Add `db-seed` to the dependency list if you want seed data on every start.
+dev: db-ensure db-migrate-on-start
 	npm run start:dev
+
+# Apply any pending migrations without prompting for a new name.
+# Uses `migrate deploy` so it only applies existing migrations (safe for repeated runs).
+# Falls back to a quick status check so we don't print noisy output when already up to date.
+db-migrate-on-start:
+	@echo "Checking migrations..."
+	@if npm run db:migrate:status 2>&1 | grep -q "Database schema is up to date"; then \
+		echo "Schema is up to date"; \
+	else \
+		echo "Applying pending migrations..."; \
+		npm run db:migrate:deploy; \
+	fi
+	@npm run db:generate
+
 
 debug:
 	npm run start:debug
