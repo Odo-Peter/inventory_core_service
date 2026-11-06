@@ -2,6 +2,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import type { StaffRole } from '../src/generated/prisma/enums.js';
+import { ItemUnit } from '../src/modules/catalog/item-unit.enum.js';
 import {
   bearer,
   createStaff,
@@ -459,20 +460,54 @@ describe('Catalog (e2e)', () => {
     expect(itemAudits[0].store_id).toBe(storeId);
   });
 
-  it('rejects item creation with image when storage is disabled', async () => {
-    const image = await imageBuffer('png');
+  it('lists the supported item units before the :id route', async () => {
+    const response = await request(server())
+      .get('/api/v1/items/units')
+      .set(bearer(tokens.cashier))
+      .expect(200);
 
+    expect(response.body).toEqual({ units: Object.values(ItemUnit) });
+  });
+
+  it('rejects a malformed item id with 400', async () => {
+    await request(server())
+      .get('/api/v1/items/not-a-uuid')
+      .set(bearer(tokens.cashier))
+      .expect(400);
+  });
+
+  it('rejects item creation with an unknown unit', async () => {
     await request(server())
       .post('/api/v1/items')
       .set(bearer(tokens.admin))
-      .field('name', 'With image')
-      .field('unit', 'piece')
-      .field('current_price', '1000')
-      .attach('image', image, 'photo.png')
-      .expect(503)
+      .send({ name: 'Bad unit', unit: 'kg', current_price: 1000 })
+      .expect(400)
       .expect((res) => {
-        expect(res.body.code).toBe('image_storage_disabled');
+        expect(JSON.stringify(res.body)).toContain('piece');
       });
+  });
+
+  it('rejects item creation with image when storage is disabled', async () => {
+    // This suite overrides storage with an in-memory implementation, so use a
+    // separate app with the default (disabled) storage provider for this case.
+    const disabledContext = await createTestApp();
+    const image = await imageBuffer('png');
+
+    try {
+      await request(disabledContext.app.getHttpServer())
+        .post('/api/v1/items')
+        .set(bearer(tokens.admin))
+        .field('name', 'With image')
+        .field('unit', 'piece')
+        .field('current_price', '1000')
+        .attach('image', image, 'photo.png')
+        .expect(503)
+        .expect((res) => {
+          expect(res.body.code).toBe('image_storage_disabled');
+        });
+    } finally {
+      await disabledContext.app.close();
+    }
   });
 
   it('creates an item without an image when none is supplied', async () => {

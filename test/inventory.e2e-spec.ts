@@ -171,11 +171,12 @@ describe('Inventory (e2e)', () => {
     const item = await createItem();
     await postStock(item.id, 'initial', { quantity: 10 }).expect(201);
 
-    await postStock(item.id, 'adjust', { quantity_change: 5 }).expect(200);
+    // All stock writes intentionally share the default POST 201 response.
+    await postStock(item.id, 'adjust', { quantity_change: 5 }).expect(201);
     await postStock(item.id, 'adjust', {
       quantity_change: -3,
       note: 'Count correction',
-    }).expect(200);
+    }).expect(201);
 
     expect(
       (
@@ -246,7 +247,7 @@ describe('Inventory (e2e)', () => {
       .expect(409)
       .expect((res) => expect(res.body.code).toBe('item_inactive'));
 
-    await postStock(inactive.id, 'adjust', { quantity_change: -1 }).expect(200);
+    await postStock(inactive.id, 'adjust', { quantity_change: -1 }).expect(201);
     await postStock(inactive.id, 'damage', { quantity: 1 }).expect(201);
 
     expect(
@@ -281,7 +282,7 @@ describe('Inventory (e2e)', () => {
     ]);
 
     expect(results.map((r) => r.status).sort((a, b) => a - b)).toEqual([
-      200, 409,
+      201, 409,
     ]);
     expect(
       (
