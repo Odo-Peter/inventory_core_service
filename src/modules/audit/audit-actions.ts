@@ -15,6 +15,21 @@ export const AUDIT_ACTIONS = {
   shiftClockIn: 'shift.clock_in',
   shiftClockOut: 'shift.clock_out',
   shiftForceClosed: 'shift.force_closed',
+  categoryCreated: 'category.created',
+  categoryUpdated: 'category.updated',
+  itemCreated: 'item.created',
+  itemUpdated: 'item.updated',
+  itemDeactivated: 'item.deactivated',
+  itemPriceChanged: 'item.price_changed',
+  itemImageUpdated: 'item.image_updated',
+  itemImageRemoved: 'item.image_removed',
+  stockInitialized: 'stock.initialized',
+  stockReceived: 'stock.received',
+  stockAdjusted: 'stock.adjusted',
+  stockDamaged: 'stock.damaged',
+  posAccountCreated: 'pos_account.created',
+  posAccountUpdated: 'pos_account.updated',
+  posAccountDeactivated: 'pos_account.deactivated',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

@@ -22,6 +22,20 @@ enum ShiftCloseReason {
   handover
 }
 
+enum POSAccountType {
+  pos_terminal
+  bank_account
+}
+
+enum StockMovementReason {
+  initial
+  restock
+  sale
+  refund
+  adjustment
+  damage
+}
+
 model Store {
   id             String  @id @default(uuid()) @db.Uuid
   name           String
@@ -38,6 +52,11 @@ model Store {
   staff      Staff[]
   shifts     Shift[]
   audit_logs AuditLog[]
+
+  categories      Category[]
+  items           Item[]
+  stock_movements StockMovement[]
+  pos_accounts    POSAccount[]
 }
 
 model Staff {
@@ -58,10 +77,13 @@ model Staff {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  store         Store      @relation(fields: [store_id], references: [id])
-  shifts        Shift[]    @relation("ShiftStaff")
-  shifts_closed Shift[]    @relation("ShiftClosedBy")
-  audit_logs    AuditLog[]
+  store                Store           @relation(fields: [store_id], references: [id])
+  shifts               Shift[]         @relation("ShiftStaff")
+  shifts_closed        Shift[]         @relation("ShiftClosedBy")
+  audit_logs           AuditLog[]
+  price_changes        PriceHistory[]  @relation("PriceHistoryChangedBy")
+  stock_movements      StockMovement[]
+  pos_accounts_created POSAccount[]    @relation("POSAccountCreatedBy")
 
   @@unique([store_id, staff_code])
   @@index([store_id, active])
@@ -108,4 +130,102 @@ model AuditLog {
   @@index([store_id, created_at])
   @@index([store_id, entity_type, entity_id])
   @@index([store_id, staff_id, created_at])
+}
+
+model Category {
+  id       String  @id @default(uuid()) @db.Uuid
+  store_id String  @db.Uuid
+  name     String
+  active   Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  store Store  @relation(fields: [store_id], references: [id])
+  items Item[]
+
+  @@unique([store_id, name])
+  @@index([store_id, active])
+}
+
+model Item {
+  id                String  @id @default(uuid()) @db.Uuid
+  store_id          String  @db.Uuid
+  sku               String
+  barcode           String?
+  image_key         String?
+  name              String
+  category_id       String? @db.Uuid
+  unit              String
+  current_price     Int
+  cost_price        Int?
+  stock_quantity    Int     @default(0)
+  reorder_threshold Int     @default(0)
+  active            Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  store           Store           @relation(fields: [store_id], references: [id])
+  category        Category?       @relation(fields: [category_id], references: [id])
+  price_history   PriceHistory[]
+  stock_movements StockMovement[]
+
+  @@unique([store_id, sku])
+  @@unique([store_id, barcode])
+  @@index([store_id, category_id])
+  @@index([store_id, active])
+}
+
+model PriceHistory {
+  id                  String   @id @default(uuid()) @db.Uuid
+  item_id             String   @db.Uuid
+  old_price           Int
+  new_price           Int
+  changed_by_staff_id String?  @db.Uuid
+  changed_at          DateTime @default(now())
+
+  item       Item   @relation(fields: [item_id], references: [id])
+  changed_by Staff? @relation("PriceHistoryChangedBy", fields: [changed_by_staff_id], references: [id])
+
+  @@index([item_id, changed_at])
+}
+
+model StockMovement {
+  id              String              @id @default(uuid()) @db.Uuid
+  store_id        String              @db.Uuid
+  item_id         String              @db.Uuid
+  quantity_change Int
+  reason          StockMovementReason
+  sale_id         String?             @db.Uuid
+  refund_id       String?             @db.Uuid
+  staff_id        String?             @db.Uuid
+  note            String?
+  created_at      DateTime            @default(now())
+
+  store Store  @relation(fields: [store_id], references: [id])
+  item  Item   @relation(fields: [item_id], references: [id])
+  staff Staff? @relation(fields: [staff_id], references: [id])
+
+  @@index([store_id, item_id, created_at])
+  @@index([sale_id])
+  @@index([refund_id])
+}
+
+model POSAccount {
+  id                  String         @id @default(uuid()) @db.Uuid
+  store_id            String         @db.Uuid
+  label               String
+  type                POSAccountType
+  details             String?
+  active              Boolean        @default(true)
+  created_by_staff_id String?        @db.Uuid
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  store      Store  @relation(fields: [store_id], references: [id])
+  created_by Staff? @relation("POSAccountCreatedBy", fields: [created_by_staff_id], references: [id])
+
+  @@index([store_id, active])
 }

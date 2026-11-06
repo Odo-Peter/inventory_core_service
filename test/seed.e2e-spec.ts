@@ -86,6 +86,59 @@ describe('Database seed (e2e)', () => {
     expect(second.token_version).toBe(first.token_version);
   });
 
+  it('seeds catalog items with opening stock movements and POS accounts', async () => {
+    await runSeed(context.prisma, seedEnv());
+
+    expect(await context.prisma.category.count()).toBeGreaterThanOrEqual(3);
+    const items = await context.prisma.item.findMany({
+      include: { stock_movements: true },
+    });
+    expect(items).toHaveLength(4);
+
+    for (const item of items) {
+      expect(item.stock_quantity).toBeGreaterThan(0);
+      expect(item.stock_movements).toHaveLength(1);
+      expect(item.stock_movements[0]).toMatchObject({
+        reason: 'initial',
+        quantity_change: item.stock_quantity,
+      });
+    }
+
+    const accounts = await context.prisma.pOSAccount.findMany();
+    expect(accounts.map((account) => account.type).sort((a, b) => a.localeCompare(b))).toEqual([
+      'bank_account',
+      'pos_terminal',
+    ]);
+    expect(
+      await context.prisma.auditLog.count({
+        where: { action: 'stock.initialized' },
+      }),
+    ).toBe(4);
+  });
+
+  it('does not duplicate catalog stock or POS accounts on rerun', async () => {
+    await runSeed(context.prisma, seedEnv());
+    const firstItems = await context.prisma.item.findMany({
+      orderBy: { sku: 'asc' },
+      select: { id: true, sku: true, stock_quantity: true },
+    });
+    const firstMovements = await context.prisma.stockMovement.count();
+    const firstAccounts = await context.prisma.pOSAccount.count();
+
+    await runSeed(context.prisma, seedEnv());
+
+    const secondItems = await context.prisma.item.findMany({
+      orderBy: { sku: 'asc' },
+      select: { id: true, sku: true, stock_quantity: true },
+    });
+    expect(secondItems).toEqual(firstItems);
+    expect(await context.prisma.stockMovement.count()).toBe(firstMovements);
+    expect(await context.prisma.auditLog.count({
+      where: { action: 'stock.initialized' },
+    })).toBe(firstMovements);
+    expect(await context.prisma.pOSAccount.count()).toBe(firstAccounts);
+  });
+
   it('updates only the phone when only SEED_ADMIN_PHONE changes', async () => {
     await runSeed(context.prisma, seedEnv());
     const first = await context.prisma.staff.findFirstOrThrow({

@@ -12,6 +12,9 @@ import { UsersModule } from './modules/users/users.module.js';
 import { StoresModule } from './modules/stores/stores.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { ShiftsModule } from './modules/shifts/shifts.module.js';
+import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { InventoryModule } from './modules/inventory/inventory.module.js';
+import { PaymentsModule } from './modules/payments/payments.module.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -110,6 +113,9 @@ const isProduction = process.env.NODE_ENV === 'production';
     StoresModule,
     AuditModule,
     ShiftsModule,
+    CatalogModule,
+    InventoryModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

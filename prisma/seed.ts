@@ -5,6 +5,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 import { Prisma, PrismaClient } from '../src/generated/prisma/client.js';
+import type { POSAccountType } from '../src/generated/prisma/enums.js';
+import { AuditService } from '../src/modules/audit/audit.service.js';
+import type { Principal } from '../src/modules/auth/principal.js';
+import { StockService } from '../src/modules/inventory/stock.service.js';
+import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { PIN_HASH_OPTIONS } from '../src/modules/auth/pin-hashing.constants.js';
 import { applyPinPepper } from '../src/modules/auth/pin-pepper.js';
 import { isPinFormatValid, isWeakPin } from '../src/modules/auth/pin-policy.js';
@@ -109,13 +114,15 @@ export async function runSeed(
     where: staffWhere,
   });
 
-  if (!existingAdmin) {
+  let admin = existingAdmin;
+
+  if (!admin) {
     const pinHash = await hash(
       applyPinPepper(adminPin, pinPepper),
       PIN_HASH_OPTIONS,
     );
 
-    await prisma.staff.create({
+    admin = await prisma.staff.create({
       data: {
         store_id: store.id,
         staff_code: adminCode,
@@ -127,31 +134,186 @@ export async function runSeed(
         active: true,
       },
     });
-    return;
+  } else {
+    const staffUpdate: Prisma.StaffUpdateInput = {};
+
+    if (admin.first_name !== adminFirstName) {
+      staffUpdate.first_name = adminFirstName;
+    }
+    if (admin.last_name !== adminLastName) {
+      staffUpdate.last_name = adminLastName;
+    }
+    if (admin.phone !== adminPhone) {
+      staffUpdate.phone = adminPhone;
+    }
+    if (admin.role !== 'admin') {
+      staffUpdate.role = 'admin';
+    }
+    if (!admin.active) {
+      staffUpdate.active = true;
+    }
+
+    if (Object.keys(staffUpdate).length > 0) {
+      admin = await prisma.staff.update({
+        where: { id: admin.id },
+        data: staffUpdate,
+      });
+    }
   }
 
-  const staffUpdate: Prisma.StaffUpdateInput = {};
+  await seedCatalog(prisma, {
+    staff_id: admin.id,
+    store_id: store.id,
+    role: 'admin',
+  });
+  await seedPosAccounts(prisma, store.id, admin.id);
+}
 
-  if (existingAdmin.first_name !== adminFirstName) {
-    staffUpdate.first_name = adminFirstName;
-  }
-  if (existingAdmin.last_name !== adminLastName) {
-    staffUpdate.last_name = adminLastName;
-  }
-  if (existingAdmin.phone !== adminPhone) {
-    staffUpdate.phone = adminPhone;
-  }
-  if (existingAdmin.role !== 'admin') {
-    staffUpdate.role = 'admin';
-  }
-  if (!existingAdmin.active) {
-    staffUpdate.active = true;
+const SEED_CATEGORIES = ['Beverages', 'Snacks', 'Household'] as const;
+
+const SEED_ITEMS = [
+  {
+    sku: 'BEV-WATER-50CL',
+    barcode: '100000000001',
+    name: 'Bottled Water 50cl',
+    category: 'Beverages',
+    unit: 'bottle',
+    current_price: 200,
+    cost_price: 120,
+    reorder_threshold: 12,
+    opening_quantity: 48,
+  },
+  {
+    sku: 'BEV-COLA-50CL',
+    barcode: '100000000002',
+    name: 'Cola Drink 50cl',
+    category: 'Beverages',
+    unit: 'bottle',
+    current_price: 350,
+    cost_price: 250,
+    reorder_threshold: 12,
+    opening_quantity: 36,
+  },
+  {
+    sku: 'SNK-CHIPS-50G',
+    barcode: '100000000003',
+    name: 'Potato Chips 50g',
+    category: 'Snacks',
+    unit: 'pack',
+    current_price: 500,
+    cost_price: 350,
+    reorder_threshold: 8,
+    opening_quantity: 24,
+  },
+  {
+    sku: 'HHD-SOAP-100G',
+    barcode: '100000000004',
+    name: 'Bar Soap 100g',
+    category: 'Household',
+    unit: 'piece',
+    current_price: 450,
+    cost_price: 300,
+    reorder_threshold: 6,
+    opening_quantity: 20,
+  },
+] as const;
+
+const SEED_POS_ACCOUNTS: ReadonlyArray<{
+  label: string;
+  type: POSAccountType;
+  details: string;
+}> = [
+  {
+    label: 'Front Counter POS',
+    type: 'pos_terminal',
+    details: 'Counter terminal 1',
+  },
+  {
+    label: 'Store Bank Account',
+    type: 'bank_account',
+    details: 'Business bank account ending 4821',
+  },
+];
+
+async function seedCatalog(
+  prisma: PrismaClient,
+  principal: Principal,
+): Promise<void> {
+  const prismaService = prisma as unknown as PrismaService;
+  const stock = new StockService(
+    prismaService,
+    new AuditService(prismaService),
+  );
+  const categoryIds = new Map<string, string>();
+
+  for (const name of SEED_CATEGORIES) {
+    const existing = await prisma.category.findUnique({
+      where: { store_id_name: { store_id: principal.store_id, name } },
+    });
+    const category =
+      existing ??
+      (await prisma.category.create({
+        data: { store_id: principal.store_id, name },
+      }));
+    categoryIds.set(name, category.id);
   }
 
-  if (Object.keys(staffUpdate).length > 0) {
-    await prisma.staff.update({
-      where: { id: existingAdmin.id },
-      data: staffUpdate,
+  for (const item of SEED_ITEMS) {
+    const existing = await prisma.item.findUnique({
+      where: {
+        store_id_sku: { store_id: principal.store_id, sku: item.sku },
+      },
+    });
+    if (existing) {
+      continue;
+    }
+
+    const created = await prisma.item.create({
+      data: {
+        store_id: principal.store_id,
+        sku: item.sku,
+        barcode: item.barcode,
+        name: item.name,
+        category_id: categoryIds.get(item.category) ?? null,
+        unit: item.unit,
+        current_price: item.current_price,
+        cost_price: item.cost_price,
+        reorder_threshold: item.reorder_threshold,
+      },
+    });
+
+    await stock.initialize(principal, created.id, {
+      quantity: item.opening_quantity,
+      note: 'Seed opening stock',
+    });
+  }
+}
+
+async function seedPosAccounts(
+  prisma: PrismaClient,
+  storeId: string,
+  adminStaffId: string,
+): Promise<void> {
+  for (const account of SEED_POS_ACCOUNTS) {
+    const existing = await prisma.pOSAccount.findFirst({
+      where: {
+        store_id: storeId,
+        label: account.label,
+        type: account.type,
+      },
+    });
+    if (existing) {
+      continue;
+    }
+
+    await prisma.pOSAccount.create({
+      data: {
+        store_id: storeId,
+        label: account.label,
+        type: account.type,
+        details: account.details,
+        created_by_staff_id: adminStaffId,
+      },
     });
   }
 }
@@ -163,7 +325,7 @@ async function main(): Promise<void> {
 
   try {
     await runSeed(prisma, process.env);
-    console.log('Seed complete for admin user 🎉🎊');
+    console.log('Seed complete for admin, catalog and POS accounts 🎉🎊');
   } finally {
     await prisma.$disconnect();
     await pool.end();
