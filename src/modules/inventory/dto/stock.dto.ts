@@ -9,7 +9,10 @@ import {
   NotEquals,
 } from 'class-validator';
 
-import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
+import {
+  PageMetaDto,
+  PaginatedResponseDto,
+} from '../../../common/pagination/paginated-response.dto.js';
 import type { StockMovementReason } from '../../../generated/prisma/enums.js';
 
 class StockNoteDto {
@@ -147,4 +150,13 @@ export class StockStatusResponseDto {
   @ApiProperty()
   receive_allowed: boolean;
 }
+
 export class ReconciliationListResponseDto extends PaginatedResponseDto<ReconciliationItemDto> {}
+
+export class StoreStockMovementResponseDto extends StockMovementResponseDto {
+  @ApiProperty() item_name: string;
+  @ApiProperty() item_sku: string;
+  @ApiPropertyOptional({ nullable: true }) staff_name: string | null;
+}
+
+export class StoreStockMovementListResponseDto extends PaginatedResponseDto<StoreStockMovementResponseDto> {}

@@ -205,15 +205,6 @@ export class ItemsService {
     const data: Prisma.ItemUncheckedUpdateInput = {};
     const changed: string[] = [];
 
-    if (dto.sku !== undefined) {
-      const sku = dto.sku.trim();
-      if (sku !== existing.sku) {
-        await this.assertSkuAvailable(principal.store_id, sku, id);
-      }
-      data.sku = sku;
-      changed.push('sku');
-    }
-
     if (dto.barcode !== undefined) {
       const barcode = normalizeOptionalText(dto.barcode);
       if (barcode !== existing.barcode) {

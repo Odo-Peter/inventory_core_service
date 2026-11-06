@@ -23,9 +23,11 @@ import type {
   StockMovementListResponseDto,
   StockMovementResponseDto,
   StockStatusResponseDto,
+  StoreStockMovementListResponseDto,
 } from './dto/stock.dto.js';
 import { PaginationQueryDto } from '../../common/pagination/pagination-query.dto.js';
 import { toStockMovementResponse } from './stock.mapper.js';
+import { ListMovementsQueryDto } from './dto/list-movements-query.dto.js';
 
 interface LockedItem {
   id: string;
@@ -351,6 +353,78 @@ export class StockService {
       has_movements: hasMovements,
       opening_stock_allowed: item.active && !hasMovements,
       receive_allowed: item.active,
+    };
+  }
+
+  async listStoreMovements(
+    principal: Principal,
+    query: ListMovementsQueryDto,
+  ): Promise<StoreStockMovementListResponseDto> {
+    const from = query.from ? new Date(query.from) : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
+
+    if (from && to && from >= to) {
+      throw new AppException(
+        400,
+        'invalid_date_range',
+        'The from date must be before the to date',
+      );
+    }
+
+    const where: Prisma.StockMovementWhereInput = {
+      store_id: principal.store_id,
+      ...(query.item_id ? { item_id: query.item_id } : {}),
+      ...(query.staff_id ? { staff_id: query.staff_id } : {}),
+      ...(query.reason?.length ? { reason: { in: query.reason } } : {}),
+      ...(from || to
+        ? {
+            created_at: {
+              ...(from ? { gte: from } : {}),
+              ...(to ? { lte: to } : {}),
+            },
+          }
+        : {}),
+      ...(query.search
+        ? {
+            item: {
+              OR: [
+                { name: { contains: query.search, mode: 'insensitive' } },
+                { sku: { contains: query.search, mode: 'insensitive' } },
+                { barcode: { contains: query.search, mode: 'insensitive' } },
+              ],
+            },
+          }
+        : {}),
+    };
+
+    const page = query.page ?? DEFAULT_PAGE;
+    const pageSize = query.page_size ?? DEFAULT_PAGE_SIZE;
+    const { skip, take } = toSkipTake(page, pageSize);
+
+    const [movements, total] = await this.prisma.$transaction([
+      this.prisma.stockMovement.findMany({
+        where,
+        include: {
+          item: { select: { name: true, sku: true } },
+          staff: { select: { first_name: true, last_name: true } },
+        },
+        orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+        skip,
+        take,
+      }),
+      this.prisma.stockMovement.count({ where }),
+    ]);
+
+    return {
+      data: movements.map((m) => ({
+        ...toStockMovementResponse(m),
+        item_name: m.item.name,
+        item_sku: m.item.sku,
+        staff_name: m.staff
+          ? `${m.staff.first_name} ${m.staff.last_name}`
+          : null,
+      })),
+      meta: buildPageMeta(total, page, pageSize),
     };
   }
 

@@ -30,8 +30,11 @@ import {
   StockMovementListResponseDto,
   StockMovementResponseDto,
   StockStatusResponseDto,
+  StoreStockMovementListResponseDto,
+  StoreStockMovementResponseDto,
 } from './dto/stock.dto.js';
 import { StockService } from './stock.service.js';
+import { ListMovementsQueryDto } from './dto/list-movements-query.dto.js';
 
 @ApiTags('Inventory')
 @ApiBearerAuth()
@@ -116,5 +119,15 @@ export class InventoryController {
     @Query() query: PaginationQueryDto,
   ): Promise<ReconciliationListResponseDto> {
     return this.stockService.reconciliation(principal, query);
+  }
+
+  @Get('movements')
+  @ApiOperation({ summary: 'List stock movements across the store' })
+  @ApiPaginatedResponse(StoreStockMovementResponseDto)
+  listStoreMovements(
+    @CurrentPrincipal() principal: Principal,
+    @Query() query: ListMovementsQueryDto,
+  ): Promise<StoreStockMovementListResponseDto> {
+    return this.stockService.listStoreMovements(principal, query);
   }
 }

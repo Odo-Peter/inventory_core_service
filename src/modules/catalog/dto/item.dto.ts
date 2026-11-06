@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -13,6 +14,7 @@ import {
 
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto.js';
 import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
+import { ITEM_UNITS, ItemUnit } from '../item-unit.enum.js';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -61,12 +63,15 @@ export class CreateItemDto {
   @IsUUID()
   category_id?: string | null;
 
-  @ApiProperty({ example: 'piece' })
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(40)
-  unit: string;
+  @ApiProperty({
+    enum: ItemUnit,
+    enumName: 'ItemUnit',
+    example: ItemUnit.PIECE,
+  })
+  @IsEnum(ItemUnit, {
+    message: `unit must be one of: ${ITEM_UNITS.join(', ')}`,
+  })
+  unit: ItemUnit;
 
   @ApiProperty({ description: 'Selling price in integer minor units' })
   @Type(() => Number)
@@ -256,3 +261,8 @@ export class PriceHistoryResponseDto {
 }
 
 export class PriceHistoryListResponseDto extends PaginatedResponseDto<PriceHistoryResponseDto> {}
+
+export class ItemUnitsResponseDto {
+  @ApiProperty({ type: [String] })
+  units: string[];
+}

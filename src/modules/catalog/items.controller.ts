@@ -34,6 +34,7 @@ import {
   CreateItemDto,
   ItemListResponseDto,
   ItemResponseDto,
+  ItemUnitsResponseDto,
   ListItemsQueryDto,
   PriceHistoryListResponseDto,
   PriceHistoryResponseDto,
@@ -42,6 +43,7 @@ import {
 import { ItemsService } from './items.service.js';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MAX_IMAGE_BYTES } from './image/image-storage.js';
+import { ITEM_UNITS, ItemUnit } from './item-unit.enum.js';
 
 @ApiTags('Catalog')
 @ApiBearerAuth()
@@ -58,6 +60,14 @@ export class ItemsController {
     @Query() query: ListItemsQueryDto,
   ): Promise<ItemListResponseDto> {
     return this.itemsService.list(principal, query);
+  }
+
+  @Roles('cashier')
+  @Get('units')
+  @ApiOperation({ summary: 'List item units dropdowns' })
+  @ApiOkResponse({ type: ItemUnitsResponseDto })
+  listUnits(): ItemUnitsResponseDto {
+    return { units: ITEM_UNITS };
   }
 
   @Roles('cashier')
