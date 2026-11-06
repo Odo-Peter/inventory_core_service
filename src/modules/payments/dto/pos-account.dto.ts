@@ -11,20 +11,11 @@ import {
 
 import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto.js';
+import { toBoolean } from '../../../common/validation/transformers.js';
 import { POSAccountType } from '../../../generated/prisma/enums.js';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
-
-const parseBoolean = ({ value }: { value: unknown }): unknown => {
-  if (value === true || value === 'true') {
-    return true;
-  }
-  if (value === false || value === 'false') {
-    return false;
-  }
-  return value;
-};
 
 export class CreatePosAccountDto {
   @ApiProperty({ example: 'Front Counter POS' })
@@ -77,7 +68,7 @@ export class UpdatePosAccountDto {
 export class ListPosAccountsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(parseBoolean)
+  @Transform(toBoolean)
   @IsBoolean()
   active?: boolean;
 

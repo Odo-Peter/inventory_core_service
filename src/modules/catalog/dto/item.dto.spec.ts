@@ -256,37 +256,39 @@ describe('CreateItemDto prices and threshold', () => {
 });
 
 describe('CreateItemDto.active', () => {
-  it('keeps the boolean value true', async () => {
+  it.each([
+    [true, true],
+    ['true', true],
+    [false, false],
+    ['false', false],
+  ])('accepts %j and stores %j', async (value, expected) => {
     const { instance, errors } = await validateDto(CreateItemDto, {
       ...VALID_CREATE,
-      active: true,
+      active: value,
     });
 
     expect(errors).toHaveLength(0);
-    expect(instance.active).toBe(true);
+    expect(instance.active).toBe(expected);
   });
 
-  it('keeps the boolean value false', async () => {
-    const { instance, errors } = await validateDto(CreateItemDto, {
-      ...VALID_CREATE,
-      active: false,
-    });
+  it('leaves an omitted value undefined so the service default applies', async () => {
+    const { instance, errors } = await validateDto(CreateItemDto, VALID_CREATE);
 
     expect(errors).toHaveLength(0);
-    expect(instance.active).toBe(false);
+    expect(instance.active).toBeUndefined();
   });
 
-  it('documents the current string "false" coercion (see report)', async () => {
-    const { instance, errors } = await validateDto(CreateItemDto, {
-      ...VALID_CREATE,
-      active: 'false',
-    });
+  it.each(['yes', ' FALSE ', 1, 0, '', null])(
+    'rejects the invalid active value %j',
+    async (active) => {
+      const { errors } = await validateDto(CreateItemDto, {
+        ...VALID_CREATE,
+        active,
+      });
 
-    // @Type(() => Boolean) uses Boolean(value), so the non-empty string
-    // "false" becomes true. This test records current behaviour only.
-    expect(errors).toHaveLength(0);
-    expect(instance.active).toBe(true);
-  });
+      expect(propertiesWithErrors(errors)).toContain('active');
+    },
+  );
 });
 
 describe('UpdateItemDto', () => {
@@ -330,6 +332,38 @@ describe('UpdateItemDto', () => {
       const { errors } = await validateDto(UpdateItemDto, { unit: 'kg' });
 
       expect(propertiesWithErrors(errors)).toContain('unit');
+    },
+  );
+});
+
+describe('UpdateItemDto.active', () => {
+  it.each([
+    [true, true],
+    ['true', true],
+    [false, false],
+    ['false', false],
+  ])('accepts %j and stores %j', async (value, expected) => {
+    const { instance, errors } = await validateDto(UpdateItemDto, {
+      active: value,
+    });
+
+    expect(errors).toHaveLength(0);
+    expect(instance.active).toBe(expected);
+  });
+
+  it('leaves an omitted value undefined', async () => {
+    const { instance, errors } = await validateDto(UpdateItemDto, {});
+
+    expect(errors).toHaveLength(0);
+    expect(instance.active).toBeUndefined();
+  });
+
+  it.each(['yes', ' FALSE ', 1, 0, '', null])(
+    'rejects the invalid active value %j',
+    async (active) => {
+      const { errors } = await validateDto(UpdateItemDto, { active });
+
+      expect(propertiesWithErrors(errors)).toContain('active');
     },
   );
 });

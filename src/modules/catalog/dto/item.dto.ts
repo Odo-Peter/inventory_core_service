@@ -10,10 +10,12 @@ import {
   IsUUID,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 import { PaginationQueryDto } from '../../../common/pagination/pagination-query.dto.js';
 import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
+import { toBoolean } from '../../../common/validation/transformers.js';
 import { ITEM_UNITS, ItemUnit } from '../item-unit.enum.js';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -25,16 +27,6 @@ const emptyToNull = ({ value }: { value: unknown }): unknown => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const parseBoolean = ({ value }: { value: unknown }): unknown => {
-  if (value === true || value === 'true') {
-    return true;
-  }
-  if (value === false || value === 'false') {
-    return false;
-  }
-  return value;
 };
 
 const normaliseName = ({ value }: { value: unknown }): unknown =>
@@ -97,8 +89,8 @@ export class CreateItemDto {
   reorder_threshold?: number;
 
   @ApiPropertyOptional({ default: true })
-  @IsOptional()
-  @Type(() => Boolean)
+  @ValidateIf((_object, value) => value !== undefined)
+  @Transform(toBoolean)
   @IsBoolean()
   active?: boolean;
 }
@@ -145,7 +137,8 @@ export class UpdateItemDto {
   reorder_threshold?: number;
 
   @ApiPropertyOptional()
-  @IsOptional()
+  @ValidateIf((_object, value) => value !== undefined)
+  @Transform(toBoolean)
   @IsBoolean()
   active?: boolean;
 }
@@ -165,7 +158,7 @@ export class ListItemsQueryDto extends PaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Transform(parseBoolean)
+  @Transform(toBoolean)
   @IsBoolean()
   active?: boolean;
 
@@ -183,7 +176,7 @@ export class ListItemsQueryDto extends PaginationQueryDto {
       'Only items with stock at or below a positive reorder threshold',
   })
   @IsOptional()
-  @Transform(parseBoolean)
+  @Transform(toBoolean)
   @IsBoolean()
   low_stock?: boolean;
 }
