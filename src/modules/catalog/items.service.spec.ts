@@ -7,6 +7,7 @@ import type { AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import type { ImageProcessor } from './image/image-processor.js';
 import type { ImageStorage } from './image/image-storage.js';
+import * as itemUnitEnum from './item-unit.enum.js';
 import { ItemUnit } from './item-unit.enum.js';
 import { ItemsService } from './items.service.js';
 
@@ -204,6 +205,41 @@ describe('ItemsService.create', () => {
     });
   });
 
+  it('rejects an invalid unit before any write or audit', async () => {
+    const { service, item, audit, transaction } = createService();
+
+    await expect(
+      service.create(MANAGER, {
+        name: 'Bad unit',
+        unit: 'kg' as unknown as ItemUnit,
+        current_price: 1,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_unit' });
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(item.create).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it.each(Object.values(ItemUnit))(
+    'persists the %s unit when called without a DTO',
+    async (unit) => {
+      const { service, item } = createService();
+      item.findFirst.mockResolvedValue(null);
+      item.create.mockResolvedValue(buildItem({ unit }));
+
+      await service.create(MANAGER, {
+        name: 'Unit check',
+        unit,
+        current_price: 1,
+      });
+
+      expect(item.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ unit }),
+      });
+    },
+  );
+
   it('rejects a barcode already used in the same store', async () => {
     const { service, item, transaction } = createService();
     item.findFirst.mockImplementation(({ where }: { where: { barcode?: string } }) =>
@@ -304,6 +340,53 @@ describe('ItemsService.update', () => {
       expect.anything(),
     );
     expect(result.name).toBe('New Name');
+  });
+
+  it('rejects an invalid unit before any write or audit', async () => {
+    const { service, item, audit, transaction } = createService();
+    const existing = buildItem();
+    item.findFirst.mockResolvedValue(existing);
+
+    await expect(
+      service.update(MANAGER, existing.id, {
+        unit: 'kg' as unknown as ItemUnit,
+      }),
+    ).rejects.toMatchObject({ code: 'invalid_unit' });
+
+    expect(transaction).not.toHaveBeenCalled();
+    expect(item.update).not.toHaveBeenCalled();
+    expect(audit.record).not.toHaveBeenCalled();
+  });
+
+  it.each(Object.values(ItemUnit))(
+    'accepts the %s unit when called without a DTO',
+    async (unit) => {
+      const { service, item } = createService();
+      const existing = buildItem({ unit: 'legacy-unit' });
+      item.findFirst.mockResolvedValue(existing);
+      item.update.mockResolvedValue({ ...existing, unit });
+
+      const result = await service.update(MANAGER, existing.id, { unit });
+
+      expect(item.update).toHaveBeenCalledWith({
+        where: { id: existing.id },
+        data: { unit },
+      });
+      expect(result.unit).toBe(unit);
+    },
+  );
+
+  it('does not invoke the unit guard when unit is omitted', async () => {
+    const { service, item } = createService();
+    const existing = buildItem({ name: 'Old Name' });
+    item.findFirst.mockResolvedValue(existing);
+    item.update.mockResolvedValue({ ...existing, name: 'New Name' });
+    const guard = vi.spyOn(itemUnitEnum, 'assertValidUnit');
+
+    await service.update(MANAGER, existing.id, { name: 'New Name' });
+
+    expect(guard).not.toHaveBeenCalled();
+    guard.mockRestore();
   });
 
   it('returns the existing item without writing when nothing changed', async () => {

@@ -15,6 +15,7 @@ import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import { normalizeDisplayText, normalizeOptionalText } from './catalog-text.js';
+import { assertValidUnit } from './item-unit.enum.js';
 import { toItemResponse, toPriceHistoryResponse } from './item.mapper.js';
 import type {
   ChangeItemPriceDto,
@@ -118,6 +119,7 @@ export class ItemsService {
     dto: CreateItemDto,
     file?: UploadedImage,
   ): Promise<ItemResponseDto> {
+    assertValidUnit(dto.unit);
     const barcode = normalizeOptionalText(dto.barcode);
     const categoryId = dto.category_id ?? null;
 
@@ -201,6 +203,9 @@ export class ItemsService {
     id: string,
     dto: UpdateItemDto,
   ): Promise<ItemResponseDto> {
+    if (dto.unit !== undefined) {
+      assertValidUnit(dto.unit);
+    }
     const existing = await this.findScopedItem(principal, id);
     const data: Prisma.ItemUncheckedUpdateInput = {};
     const changed: string[] = [];

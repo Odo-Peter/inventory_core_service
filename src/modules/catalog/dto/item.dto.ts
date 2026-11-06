@@ -1,4 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  OmitType,
+  PartialType,
+} from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -95,53 +100,10 @@ export class CreateItemDto {
   active?: boolean;
 }
 
-export class UpdateItemDto {
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @Transform(emptyToNull)
-  @IsString()
-  @MaxLength(64)
-  barcode?: string | null;
-
-  @ApiPropertyOptional({ example: 'Coca-Cola 50cl' })
-  @IsOptional()
-  @Transform(normaliseName)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(160)
-  name?: string;
-
-  @ApiPropertyOptional({ format: 'uuid', nullable: true })
-  @IsOptional()
-  @IsUUID()
-  category_id?: string | null;
-
-  @ApiPropertyOptional({ example: 'piece' })
-  @IsOptional()
-  @Transform(trim)
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(40)
-  unit?: string;
-
-  @ApiPropertyOptional({ nullable: true })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  cost_price?: number | null;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  reorder_threshold?: number;
-
-  @ApiPropertyOptional()
-  @ValidateIf((_object, value) => value !== undefined)
-  @Transform(toBoolean)
-  @IsBoolean()
-  active?: boolean;
-}
+export class UpdateItemDto extends PartialType(
+  OmitType(CreateItemDto, ['current_price'] as const),
+  { skipNullProperties: false },
+) {}
 
 export class ChangeItemPriceDto {
   @ApiProperty({ description: 'New selling price in integer minor units' })

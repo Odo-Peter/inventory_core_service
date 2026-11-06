@@ -17,6 +17,7 @@ import {
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
@@ -126,6 +127,7 @@ export class ItemsController {
       ],
     },
   })
+  @ApiExtraModels(CreateItemDto)
   @ApiCreatedResponse({ type: ItemResponseDto })
   create(
     @CurrentPrincipal() principal: Principal,

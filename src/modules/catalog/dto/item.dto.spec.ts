@@ -317,19 +317,10 @@ describe('UpdateItemDto', () => {
     },
   );
 
-  it.each(['', '   ', 'a'.repeat(41)])(
+  it.each(['', '   ', 'kg', 'a'.repeat(41)])(
     'rejects the invalid provided unit %j',
     async (unit) => {
       const { errors } = await validateDto(UpdateItemDto, { unit });
-
-      expect(propertiesWithErrors(errors)).toContain('unit');
-    },
-  );
-
-  it.fails(
-    'rejects an unknown unit once UpdateItemDto uses ItemUnit (known gap)',
-    async () => {
-      const { errors } = await validateDto(UpdateItemDto, { unit: 'kg' });
 
       expect(propertiesWithErrors(errors)).toContain('unit');
     },
