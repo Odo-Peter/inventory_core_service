@@ -32,8 +32,14 @@ import {
   toImageStorageError,
   UploadedImage,
 } from './image/image-processor.js';
-import { IMAGE_STORAGE, type ImageStorage } from './image/image-storage.js';
+import {
+  IMAGE_STORAGE,
+  IMAGE_VARIANTS,
+  ImageVariant,
+  type ImageStorage,
+} from './image/image-storage.js';
 import { generateSku } from './sku-generator.js';
+import { ImageVariantUrlsDto } from './dto/item-image.dto.js';
 
 @Injectable()
 export class ItemsService {
@@ -74,6 +80,8 @@ export class ItemsService {
       ];
     }
 
+    const withImages = query.include_image_urls === true;
+
     const { skip, take } = toSkipTake(page, pageSize);
     const [items, total] = await this.prisma.$transaction([
       this.prisma.item.findMany({
@@ -86,7 +94,13 @@ export class ItemsService {
     ]);
 
     return {
-      data: items.map((item) => toItemResponse(item, principal.role)),
+      data: items.map((item) =>
+        toItemResponse(
+          item,
+          principal.role,
+          withImages ? this.imageUrls(item.image_key) : undefined,
+        ),
+      ),
       meta: buildPageMeta(total, page, pageSize),
     };
   }
@@ -590,5 +604,15 @@ export class ItemsService {
           : `An item named "${normalized}" already exists (currently deactivated)`,
       );
     }
+  }
+
+  private imageUrls(key: string | null): ImageVariantUrlsDto | null {
+    if (!key || !this.storage.enabled) return null;
+    return Object.fromEntries(
+      (Object.keys(IMAGE_VARIANTS) as ImageVariant[]).map((v) => [
+        v,
+        this.storage.url(key, v),
+      ]),
+    ) as unknown as ImageVariantUrlsDto;
   }
 }
