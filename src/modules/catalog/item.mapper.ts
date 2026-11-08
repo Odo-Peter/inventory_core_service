@@ -1,9 +1,6 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import type { StaffRole } from '../../generated/prisma/enums.js';
-import type {
-  ItemModel,
-  PriceHistoryModel,
-} from '../../generated/prisma/models.js';
+import type { ItemModel } from '../../generated/prisma/models.js';
 import type {
   ItemResponseDto,
   PriceHistoryResponseDto,
