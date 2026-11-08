@@ -42,7 +42,7 @@ export interface ApplyMovementInput {
   note?: string | null;
   sale_id?: string | null;
   refund_id?: string | null;
-  audit_action: AuditAction;
+  audit_action?: AuditAction;
   audit_details?: Prisma.InputJsonObject;
 }
 
@@ -148,87 +148,104 @@ export class StockService {
     principal: Principal,
     input: ApplyMovementInput,
   ): Promise<StockMovementModel> {
+    return this.prisma.$transaction((tx) =>
+      this.applyMovementInTx(tx, principal, input),
+    );
+  }
+
+  /**
+   * The same stock write, joined to a caller-owned transaction. Callers that
+   * group several writes (for example a sale) use this so the whole group is
+   * atomic.
+   */
+  async applyMovementInTx(
+    tx: Prisma.TransactionClient,
+    principal: Principal,
+    input: ApplyMovementInput,
+  ): Promise<StockMovementModel> {
     this.assertSign(input.reason, input.quantity_change);
     const requiresActiveItem =
-      input.reason === 'initial' || input.reason === 'restock';
+      input.reason === 'initial' ||
+      input.reason === 'restock' ||
+      input.reason === 'sale';
     const requiresNoPriorMovements = input.reason === 'initial';
 
-    return this.prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<LockedItem[]>(Prisma.sql`
-        SELECT "id", "stock_quantity", "active"
-        FROM "Item"
-        WHERE "id" = ${input.item_id} AND "store_id" = ${principal.store_id}
-        FOR UPDATE
-      `);
+    const locked = await tx.$queryRaw<LockedItem[]>(Prisma.sql`
+      SELECT "id", "stock_quantity", "active"
+      FROM "Item"
+      WHERE "id" = ${input.item_id} AND "store_id" = ${principal.store_id}
+      FOR UPDATE
+    `);
 
-      const item = locked[0];
-      if (!item) {
-        throw new AppException(404, 'item_not_found', 'Item not found');
-      }
+    const item = locked[0];
+    if (!item) {
+      throw new AppException(404, 'item_not_found', 'Item not found');
+    }
 
-      if (requiresActiveItem && !item.active) {
+    if (requiresActiveItem && !item.active) {
+      throw new AppException(
+        409,
+        'item_inactive',
+        'Reactivate this item before changing its stock this way',
+      );
+    }
+
+    if (requiresNoPriorMovements) {
+      const prior = await tx.stockMovement.count({
+        where: { item_id: item.id },
+      });
+      if (prior > 0) {
         throw new AppException(
           409,
-          'item_inactive',
-          'Reactivate this item before changing its stock this way',
+          'initial_stock_exists',
+          'Opening stock has already been recorded for this item',
         );
       }
+    }
 
-      if (requiresNoPriorMovements) {
-        const prior = await tx.stockMovement.count({
-          where: { item_id: item.id },
-        });
-        if (prior > 0) {
-          throw new AppException(
-            409,
-            'initial_stock_exists',
-            'Opening stock has already been recorded for this item',
-          );
-        }
-      }
+    const movement = await tx.stockMovement.create({
+      data: {
+        store_id: principal.store_id,
+        item_id: item.id,
+        quantity_change: input.quantity_change,
+        reason: input.reason,
+        sale_id: input.sale_id ?? null,
+        refund_id: input.refund_id ?? null,
+        staff_id: principal.staff_id,
+        note: input.note ?? null,
+      },
+    });
 
-      const movement = await tx.stockMovement.create({
-        data: {
-          store_id: principal.store_id,
-          item_id: item.id,
-          quantity_change: input.quantity_change,
-          reason: input.reason,
-          sale_id: input.sale_id ?? null,
-          refund_id: input.refund_id ?? null,
-          staff_id: principal.staff_id,
-          note: input.note ?? null,
-        },
+    if (input.quantity_change >= 0) {
+      const updated = await tx.item.updateMany({
+        where: { id: item.id, store_id: principal.store_id },
+        data: { stock_quantity: { increment: input.quantity_change } },
       });
 
-      if (input.quantity_change >= 0) {
-        const updated = await tx.item.updateMany({
-          where: { id: item.id, store_id: principal.store_id },
-          data: { stock_quantity: { increment: input.quantity_change } },
-        });
-
-        if (updated.count !== 1) {
-          throw new AppException(404, 'item_not_found', 'Item not found');
-        }
-      } else {
-        const decrement = -input.quantity_change;
-        const updated = await tx.item.updateMany({
-          where: {
-            id: item.id,
-            store_id: principal.store_id,
-            stock_quantity: { gte: decrement },
-          },
-          data: { stock_quantity: { decrement } },
-        });
-
-        if (updated.count !== 1) {
-          throw new AppException(
-            409,
-            'insufficient_stock',
-            'Stock cannot go below zero',
-          );
-        }
+      if (updated.count !== 1) {
+        throw new AppException(404, 'item_not_found', 'Item not found');
       }
+    } else {
+      const decrement = -input.quantity_change;
+      const updated = await tx.item.updateMany({
+        where: {
+          id: item.id,
+          store_id: principal.store_id,
+          stock_quantity: { gte: decrement },
+        },
+        data: { stock_quantity: { decrement } },
+      });
 
+      if (updated.count !== 1) {
+        throw new AppException(
+          409,
+          'insufficient_stock',
+          'Stock cannot go below zero',
+        );
+      }
+    }
+
+    if (input.audit_action) {
       await this.audit.record(
         {
           store_id: principal.store_id,
@@ -244,9 +261,9 @@ export class StockService {
         },
         tx,
       );
+    }
 
-      return movement;
-    });
+    return movement;
   }
 
   async listMovements(
