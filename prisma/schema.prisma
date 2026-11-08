@@ -36,6 +36,12 @@ enum StockMovementReason {
   damage
 }
 
+enum PaymentMethod {
+  cash
+  card
+  bank_transfer
+}
+
 model Store {
   id             String  @id @default(uuid()) @db.Uuid
   name           String
@@ -45,6 +51,7 @@ model Store {
   timezone       String
   receipt_footer String?
   active         Boolean @default(true)
+  sale_counter   Int     @default(0)
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -57,6 +64,7 @@ model Store {
   items           Item[]
   stock_movements StockMovement[]
   pos_accounts    POSAccount[]
+  sales           Sale[]
 }
 
 model Staff {
@@ -84,6 +92,8 @@ model Staff {
   price_changes        PriceHistory[]  @relation("PriceHistoryChangedBy")
   stock_movements      StockMovement[]
   pos_accounts_created POSAccount[]    @relation("POSAccountCreatedBy")
+  sales                Sale[]          @relation("SaleStaff")
+  receipt_prints       ReceiptPrint[]
 
   @@unique([store_id, staff_code])
   @@index([store_id, active])
@@ -108,6 +118,7 @@ model Shift {
   store     Store  @relation(fields: [store_id], references: [id])
   staff     Staff  @relation("ShiftStaff", fields: [staff_id], references: [id])
   closed_by Staff? @relation("ShiftClosedBy", fields: [closed_by_staff_id], references: [id])
+  sales     Sale[]
 
   @@index([store_id, clock_in_at])
   @@index([staff_id, clock_out_at])
@@ -170,6 +181,7 @@ model Item {
   category        Category?       @relation(fields: [category_id], references: [id])
   price_history   PriceHistory[]
   stock_movements StockMovement[]
+  sale_items      SaleItem[]
 
   @@unique([store_id, sku])
   @@unique([store_id, barcode])
@@ -206,8 +218,11 @@ model StockMovement {
   store Store  @relation(fields: [store_id], references: [id])
   item  Item   @relation(fields: [item_id], references: [id])
   staff Staff? @relation(fields: [staff_id], references: [id])
+  sale  Sale?  @relation(fields: [sale_id], references: [id])
 
   @@index([store_id, item_id, created_at])
+  @@index([store_id, created_at(sort: Desc)])
+  @@index([store_id, reason, created_at(sort: Desc)])
   @@index([sale_id])
   @@index([refund_id])
 }
@@ -224,8 +239,79 @@ model POSAccount {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  store      Store  @relation(fields: [store_id], references: [id])
-  created_by Staff? @relation("POSAccountCreatedBy", fields: [created_by_staff_id], references: [id])
+  store      Store     @relation(fields: [store_id], references: [id])
+  created_by Staff?    @relation("POSAccountCreatedBy", fields: [created_by_staff_id], references: [id])
+  payments   Payment[]
 
   @@index([store_id, active])
+}
+
+model Sale {
+  id              String   @id @default(uuid()) @db.Uuid
+  store_id        String   @db.Uuid
+  receipt_number  Int
+  shift_id        String   @db.Uuid
+  staff_id        String   @db.Uuid
+  subtotal        Int
+  tax_total       Int      @default(0)
+  total           Int
+  idempotency_key String?
+  created_at      DateTime @default(now())
+
+  store           Store           @relation(fields: [store_id], references: [id])
+  shift           Shift           @relation(fields: [shift_id], references: [id])
+  staff           Staff           @relation("SaleStaff", fields: [staff_id], references: [id])
+  items           SaleItem[]
+  payment         Payment?
+  receipt_prints  ReceiptPrint[]
+  stock_movements StockMovement[]
+
+  @@unique([store_id, receipt_number])
+  @@unique([store_id, idempotency_key])
+  @@index([store_id, created_at(sort: Desc)])
+  @@index([store_id, staff_id, created_at(sort: Desc)])
+  @@index([shift_id])
+}
+
+model SaleItem {
+  id         String @id @default(uuid()) @db.Uuid
+  sale_id    String @db.Uuid
+  item_id    String @db.Uuid
+  sku        String
+  name       String
+  unit       String
+  unit_price Int
+  quantity   Int
+  tax_amount Int    @default(0)
+  line_total Int
+
+  sale Sale @relation(fields: [sale_id], references: [id])
+  item Item @relation(fields: [item_id], references: [id])
+
+  @@unique([sale_id, item_id])
+  @@index([item_id])
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  sale_id        String        @unique @db.Uuid
+  method         PaymentMethod
+  amount         Int
+  pos_account_id String?       @db.Uuid
+  account_label  String?
+
+  sale        Sale        @relation(fields: [sale_id], references: [id])
+  pos_account POSAccount? @relation(fields: [pos_account_id], references: [id])
+}
+
+model ReceiptPrint {
+  id         String   @id @default(uuid()) @db.Uuid
+  sale_id    String   @db.Uuid
+  staff_id   String?  @db.Uuid
+  printed_at DateTime @default(now())
+
+  sale  Sale   @relation(fields: [sale_id], references: [id])
+  staff Staff? @relation(fields: [staff_id], references: [id])
+
+  @@index([sale_id, printed_at])
 }
