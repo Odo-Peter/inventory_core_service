@@ -13,6 +13,36 @@ Read `00-global-conventions.md` first. Implement **only** the models in this doc
 
 No payment-gateway integration here. A sale is paid when staff-recorded payments cover the total (gateway confirmation is Phase 9).
 
+> **Implementation note (2026-11-08):** the shipped code records the payment and
+> prints receipts inside the `sales` module. Payment and receipt tables are
+> simpler than the original split-payment plan, and receipts are derived at read
+> time rather than persisted. Field-level deviations are listed below. The rest
+> of this document remains the original build-plan reference.
+
+## 0. Implemented deviations from this plan
+
+| Planned | Implemented | Reason |
+| --- | --- | --- |
+| `PaymentMethod.transfer` | `bank_transfer` | Matches the `POSAccountType` vocabulary used by payment options. |
+| `Payment.store_id`, `reference`, `recorded_by_staff_id`, `created_at` | Not on `Payment`; `account_label` snapshot added | The sale already scopes the store and author; `account_label` preserves the account name at sale time. |
+| Several payments per sale (split payments) | `Payment.sale_id` is unique; one payment per sale | ADR 0009 keeps split payments out of scope, so the payment amount always equals the total. |
+| Separate `Receipt` table with `receipt_number` and `printed_count` | `Sale.receipt_number` plus a `ReceiptPrint` log | Receipt content is derived from immutable sale snapshots; each print/reprint is a row. |
+| `Store.receipt_counter` | `Store.sale_counter` | One per-store counter allocates the sale's receipt number transactionally. |
+| `printed_count` incremented on the receipt | `ReceiptPrint` count scoped to the sale | The response exposes `print_number` and `is_copy = print_number > 1`. |
+| Payment/finalize endpoints separate from sale creation | `POST /api/v1/sales` records sale, payment, stock movements, and receipt number together | There is no draft stage in the shipped model. |
+| Audit actions `payment.recorded`, `sale.finalized`, `receipt.generated`, `receipt.reprinted` | `sale.created` and `sale.receipt_reprinted` | Sale creation already represents finalization; the first print is not audited. |
+
+Payment rules as shipped: cash has no POS account; card needs an active
+`pos_terminal`; bank transfer needs an active `bank_account`. Invalid or
+cross-store accounts return not found. Sale creation, payment, stock decrements,
+receipt number allocation, and the audit row share one transaction, so a failure
+persists none of them. Completed `Sale`, `SaleItem`, and `Payment` rows are
+protected by DB triggers against update/delete.
+
+Receipt responses return the sale snapshot plus current store name, address,
+phone, currency, and footer, so reprints reflect current store settings. Refunds,
+voids, split payments, tendered cash/change, and payment references are deferred.
+
 ## 1. Prisma schema
 
 ```prisma

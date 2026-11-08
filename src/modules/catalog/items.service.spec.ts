@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { ItemModel, PriceHistoryModel } from '../../generated/prisma/models.js';
+import type {
+  ItemModel,
+  PriceHistoryModel,
+} from '../../generated/prisma/models.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
 import type { AuditService } from '../audit/audit.service.js';
@@ -10,6 +13,7 @@ import type { ImageStorage } from './image/image-storage.js';
 import * as itemUnitEnum from './item-unit.enum.js';
 import { ItemUnit } from './item-unit.enum.js';
 import { ItemsService } from './items.service.js';
+import { ConflictException } from '@nestjs/common';
 
 const MANAGER: Principal = {
   staff_id: '11111111-1111-4111-8111-111111111111',
@@ -47,8 +51,22 @@ function buildItem(overrides: Partial<ItemModel> = {}): ItemModel {
 }
 
 function buildPriceHistory(
-  overrides: Partial<PriceHistoryModel> = {},
-): PriceHistoryModel {
+  overrides: Partial<PriceHistoryModel> & {
+    changed_by?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    } | null;
+  } = {},
+): PriceHistoryModel & {
+  changed_by?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+} {
+  const { changed_by, ...rest } = overrides;
+
   return {
     id: '66666666-6666-4666-8666-666666666666',
     item_id: buildItem().id,
@@ -56,7 +74,12 @@ function buildPriceHistory(
     new_price: 1_200,
     changed_by_staff_id: MANAGER.staff_id,
     changed_at: NOW,
-    ...overrides,
+    changed_by: changed_by ?? {
+      id: MANAGER.staff_id,
+      first_name: 'Ada',
+      last_name: 'Manager',
+    },
+    ...rest,
   };
 }
 
@@ -242,8 +265,9 @@ describe('ItemsService.create', () => {
 
   it('rejects a barcode already used in the same store', async () => {
     const { service, item, transaction } = createService();
-    item.findFirst.mockImplementation(({ where }: { where: { barcode?: string } }) =>
-      Promise.resolve(where.barcode ? { id: 'existing' } : null),
+    item.findFirst.mockImplementation(
+      ({ where }: { where: { barcode?: string } }) =>
+        Promise.resolve(where.barcode ? { id: 'existing' } : null),
     );
 
     await expect(
@@ -314,7 +338,8 @@ describe('ItemsService.update', () => {
       unit: ItemUnit.CAN,
       reorder_threshold: 5,
     });
-    item.findFirst.mockResolvedValue(existing);
+
+    item.findFirst.mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
     item.update.mockResolvedValue(updated);
 
     const result = await service.update(MANAGER, existing.id, {
@@ -379,8 +404,12 @@ describe('ItemsService.update', () => {
   it('does not invoke the unit guard when unit is omitted', async () => {
     const { service, item } = createService();
     const existing = buildItem({ name: 'Old Name' });
-    item.findFirst.mockResolvedValue(existing);
+
+    item.findFirst
+      .mockResolvedValueOnce(existing) // load item
+      .mockResolvedValueOnce(null); // name is available
     item.update.mockResolvedValue({ ...existing, name: 'New Name' });
+
     const guard = vi.spyOn(itemUnitEnum, 'assertValidUnit');
 
     await service.update(MANAGER, existing.id, { name: 'New Name' });
@@ -636,9 +665,9 @@ describe('ItemsService.findOne', () => {
     const { service, item } = createService();
     item.findFirst.mockResolvedValue(null);
 
-    await expect(service.findOne(MANAGER, buildItem().id)).rejects.toMatchObject(
-      { code: 'item_not_found' },
-    );
+    await expect(
+      service.findOne(MANAGER, buildItem().id),
+    ).rejects.toMatchObject({ code: 'item_not_found' });
   });
 });
 
@@ -688,6 +717,15 @@ describe('ItemsService.listPriceHistory', () => {
       orderBy: [{ changed_at: 'desc' }, { id: 'desc' }],
       skip: 1,
       take: 1,
+      include: {
+        changed_by: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+          },
+        },
+      },
     });
     expect(priceHistory.count).toHaveBeenCalledWith({
       where: { item_id: stored.id },
@@ -717,5 +755,96 @@ describe('ItemsService.listPriceHistory', () => {
     ).rejects.toMatchObject({ code: 'item_not_found' });
 
     expect(priceHistory.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('name uniqueness', () => {
+  it('rejects create when an active item already has the same name', async () => {
+    const { service, item } = createService();
+    item.findFirst.mockResolvedValue(
+      buildItem({ name: 'Coca-Cola 50cl', active: true }),
+    );
+
+    await expect(
+      service.create(MANAGER, {
+        name: '  Coca-Cola   50cl ',
+        unit: ItemUnit.PIECE,
+        current_price: 50000,
+      }),
+    ).rejects.toThrow(ConflictException);
+
+    expect(item.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects create when a deactivated item already has the same name', async () => {
+    const { service, item } = createService();
+    item.findFirst.mockResolvedValue(
+      buildItem({ name: 'Coca-Cola 50cl', active: false }),
+    );
+
+    await expect(
+      service.create(MANAGER, {
+        name: 'Coca-Cola 50cl',
+        unit: ItemUnit.PIECE,
+        current_price: 50000,
+      }),
+    ).rejects.toThrow(/already exists \(currently deactivated\)/);
+
+    expect(item.create).not.toHaveBeenCalled();
+  });
+
+  it('allows update when the name is unchanged', async () => {
+    const { service, item } = createService();
+    const existing = buildItem({ name: 'Same Name' });
+    item.findFirst.mockResolvedValue(existing);
+    item.update.mockResolvedValue(existing);
+
+    await service.update(MANAGER, existing.id, {
+      name: '  Same   Name ',
+      reorder_threshold: 3,
+    });
+
+    // only the load call — no second findFirst for name check
+    expect(item.findFirst).toHaveBeenCalledTimes(1);
+    expect(item.update).toHaveBeenCalled();
+  });
+
+  it('rejects update when another item already has the new name', async () => {
+    const { service, item } = createService();
+    const existing = buildItem({ id: 'item-1', name: 'Old Name' });
+    const conflict = buildItem({
+      id: 'item-2',
+      name: 'Taken Name',
+      active: true,
+    });
+
+    item.findFirst
+      .mockResolvedValueOnce(existing) // load item
+      .mockResolvedValueOnce(conflict); // name conflict
+
+    await expect(
+      service.update(MANAGER, existing.id, { name: 'Taken Name' }),
+    ).rejects.toThrow(/An active item named "Taken Name" already exists/);
+
+    expect(item.update).not.toHaveBeenCalled();
+  });
+
+  it('allows update to a new unique name', async () => {
+    const { service, item } = createService();
+    const existing = buildItem({ name: 'Old Name' });
+    const updated = buildItem({ ...existing, name: 'Brand New' });
+
+    item.findFirst.mockResolvedValueOnce(existing).mockResolvedValueOnce(null);
+    item.update.mockResolvedValue(updated);
+
+    const result = await service.update(MANAGER, existing.id, {
+      name: 'Brand New',
+    });
+
+    expect(item.update).toHaveBeenCalledWith({
+      where: { id: existing.id },
+      data: { name: 'Brand New' },
+    });
+    expect(result.name).toBe('Brand New');
   });
 });

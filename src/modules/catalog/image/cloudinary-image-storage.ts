@@ -27,7 +27,6 @@ export class CloudinaryImageStorage implements ImageStorage {
           overwrite: true,
           invalidate: true,
           resource_type: 'image',
-          folder: 'stocktake/items',
         },
         (error) => {
           if (error) {

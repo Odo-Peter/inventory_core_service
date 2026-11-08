@@ -1,0 +1,5270 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "operationId": "AppController_getHello_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_checkLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error",
+                        "shutting_down"
+                      ],
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_checkReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error",
+                        "shutting_down"
+                      ],
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The Health Check is successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
+                      "example": "ok"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {},
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The Health Check is not successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error",
+                        "shutting_down"
+                      ],
+                      "example": "error"
+                    },
+                    "info": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "object",
+                      "example": {
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      },
+                      "nullable": true
+                    },
+                    "details": {
+                      "type": "object",
+                      "example": {
+                        "database": {
+                          "status": "up",
+                          "responseTime": 12
+                        },
+                        "redis": {
+                          "status": "down",
+                          "message": "Could not connect",
+                          "responseTime": 3005
+                        }
+                      },
+                      "additionalProperties": {
+                        "type": "object",
+                        "required": [
+                          "status"
+                        ],
+                        "properties": {
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "up",
+                              "degraded",
+                              "down"
+                            ]
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "description": "Time the health indicator took to respond, in ms"
+                          }
+                        },
+                        "additionalProperties": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        },
+        "summary": "Log in with a staff code and PIN",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Log out and revoke all tokens",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_me_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the current staff member",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/change-pin": {
+      "post": {
+        "operationId": "AuthController_changePin_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change the current staff PIN",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/audit-logs": {
+      "get": {
+        "operationId": "AuditController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "auth.login_succeeded",
+                "auth.login_failed",
+                "auth.account_locked",
+                "auth.unlocked",
+                "auth.logout",
+                "auth.pin_changed",
+                "auth.pin_reset",
+                "auth.tokens_revoked",
+                "staff.created",
+                "staff.updated",
+                "staff.role_changed",
+                "staff.deactivated",
+                "staff.reactivated",
+                "shift.clock_in",
+                "shift.clock_out",
+                "shift.force_closed",
+                "category.created",
+                "category.updated",
+                "item.created",
+                "item.updated",
+                "item.deactivated",
+                "item.price_changed",
+                "item.image_updated",
+                "item.image_removed",
+                "stock.initialized",
+                "stock.received",
+                "stock.adjusted",
+                "stock.damaged",
+                "pos_account.created",
+                "pos_account.updated",
+                "pos_account.deactivated",
+                "sale.created",
+                "sale.receipt_reprinted"
+              ]
+            }
+          },
+          {
+            "name": "entity_type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "staff_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO 8601 lower bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Exclusive ISO 8601 upper bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditLogResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List audit log entries for the current store",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/audit-logs/actions": {
+      "get": {
+        "operationId": "AuditController_actions_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogActionsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List the known audit actions",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/api/v1/staff": {
+      "get": {
+        "operationId": "UsersController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StaffResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List staff in the current store",
+        "tags": [
+          "staff"
+        ]
+      },
+      "post": {
+        "operationId": "UsersController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffWithTemporaryPinDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a staff member with a temporary PIN",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/staff/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a staff member",
+        "tags": [
+          "staff"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a staff profile or role",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/staff/{id}/deactivate": {
+      "post": {
+        "operationId": "UsersController_deactivate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deactivate a staff member",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/staff/{id}/reactivate": {
+      "post": {
+        "operationId": "UsersController_reactivate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reactivate a staff member",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/staff/{id}/reset-pin": {
+      "post": {
+        "operationId": "UsersController_resetPin_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActingPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffWithTemporaryPinDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reset a staff PIN with the caller PIN",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/staff/{id}/unlock": {
+      "post": {
+        "operationId": "UsersController_unlock_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActingPinDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Unlock a staff account",
+        "tags": [
+          "staff"
+        ]
+      }
+    },
+    "/api/v1/stores/current": {
+      "get": {
+        "operationId": "StoresController_getCurrent_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the current store",
+        "tags": [
+          "stores"
+        ]
+      },
+      "patch": {
+        "operationId": "StoresController_updateCurrent_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStoreDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update editable store details",
+        "tags": [
+          "stores"
+        ]
+      }
+    },
+    "/api/v1/shifts/clock-in": {
+      "post": {
+        "operationId": "ShiftsController_clockIn_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClockInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Open a shift",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/clock-out": {
+      "post": {
+        "operationId": "ShiftsController_clockOut_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClockOutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Close your open shift",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/current": {
+      "get": {
+        "operationId": "ShiftsController_current_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get your open shift",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts": {
+      "get": {
+        "operationId": "ShiftsController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "staff_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive date in the store timezone",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive date in the store timezone",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ShiftResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List shifts",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/shifts/{id}/force-close": {
+      "post": {
+        "operationId": "ShiftsController_forceClose_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForceCloseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShiftResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Force-close an open shift",
+        "tags": [
+          "shifts"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "operationId": "CategoriesController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive name search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/CategoryResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List categories",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "CategoriesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a category",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "get": {
+        "operationId": "CategoriesController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a category",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "CategoriesController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a category",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items": {
+      "get": {
+        "operationId": "ItemsController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "category_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search over name, SKU and barcode",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "low_stock",
+            "required": false,
+            "in": "query",
+            "description": "Only items with stock at or below a positive reorder threshold",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List catalog items",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "ItemsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateItemDto"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "image": {
+                        "type": "string",
+                        "format": "binary"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateItemDto"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "image": {
+                        "type": "string",
+                        "format": "binary"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a catalog item with zero stock and an optional image (SKU is generated)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/units": {
+      "get": {
+        "operationId": "ItemsController_listUnits_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemUnitsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List item units dropdowns",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/barcode/{barcode}": {
+      "get": {
+        "operationId": "ItemsController_findByBarcode_v1",
+        "parameters": [
+          {
+            "name": "barcode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Look up an item by exact barcode",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/{id}": {
+      "get": {
+        "operationId": "ItemsController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a catalog item",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "ItemsController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update catalog item details (not price or stock)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/{id}/price-history": {
+      "get": {
+        "operationId": "ItemsController_listPriceHistory_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PriceHistoryResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List price history for an item",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/{id}/price": {
+      "post": {
+        "operationId": "ItemsController_changePrice_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeItemPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Change an item price",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/{id}/deactivate": {
+      "post": {
+        "operationId": "ItemsController_deactivate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deactivate a catalog item",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/items/{id}/image": {
+      "put": {
+        "operationId": "ItemImagesController_upload_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "image"
+                ],
+                "properties": {
+                  "image": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemImageResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "image_changed: the image was replaced concurrently"
+          },
+          "503": {
+            "description": "image_storage_not_configured or image_storage_unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload or replace an item image",
+        "tags": [
+          "Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "ItemImagesController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ItemImageResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Remove an item image (idempotent)",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/initial": {
+      "post": {
+        "operationId": "InventoryController_initialize_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitialStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockMovementResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record opening stock once for an item",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/receive": {
+      "post": {
+        "operationId": "InventoryController_receive_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockMovementResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receive stock for an item",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/adjust": {
+      "post": {
+        "operationId": "InventoryController_adjust_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdjustStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockMovementResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Adjust stock by a signed quantity",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/damage": {
+      "post": {
+        "operationId": "InventoryController_damage_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DamageStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockMovementResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record damaged stock",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/movements": {
+      "get": {
+        "operationId": "InventoryController_listMovements_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StockMovementResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List stock movements for an item",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/items/{id}/stock-status": {
+      "get": {
+        "operationId": "InventoryController_stockStatus_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockStatusResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Whether opening stock is still allowed for an item (read-only)",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/reconciliation": {
+      "get": {
+        "operationId": "InventoryController_reconciliation_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ReconciliationItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Detect stock cache drift (read-only)",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/inventory/movements": {
+      "get": {
+        "operationId": "InventoryController_listStoreMovements_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "item_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "reason",
+            "required": false,
+            "in": "query",
+            "description": "One or more reasons, comma-separated (e.g. sale,damage)",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "initial",
+                  "restock",
+                  "sale",
+                  "refund",
+                  "adjustment",
+                  "damage"
+                ]
+              }
+            }
+          },
+          {
+            "name": "staff_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive lower bound, ISO 8601 (e.g. 2026-11-01T00:00:00Z)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive upper bound, ISO 8601",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches item name, SKU or barcode",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/StoreStockMovementResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List stock movements across the store",
+        "tags": [
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/pos-accounts": {
+      "get": {
+        "operationId": "PosAccountsController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "type",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pos_terminal",
+                "bank_account"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PosAccountResponseDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List POS accounts",
+        "tags": [
+          "POS Accounts"
+        ]
+      },
+      "post": {
+        "operationId": "PosAccountsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePosAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PosAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a POS account",
+        "tags": [
+          "POS Accounts"
+        ]
+      }
+    },
+    "/api/v1/pos-accounts/{id}": {
+      "get": {
+        "operationId": "PosAccountsController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PosAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a POS account",
+        "tags": [
+          "POS Accounts"
+        ]
+      },
+      "patch": {
+        "operationId": "PosAccountsController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePosAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PosAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a POS account",
+        "tags": [
+          "POS Accounts"
+        ]
+      }
+    },
+    "/api/v1/pos-accounts/{id}/deactivate": {
+      "post": {
+        "operationId": "PosAccountsController_deactivate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PosAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deactivate a POS account",
+        "tags": [
+          "POS Accounts"
+        ]
+      }
+    },
+    "/api/v1/sales": {
+      "post": {
+        "operationId": "SalesController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSaleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a completed sale and its payment",
+        "tags": [
+          "Sales"
+        ]
+      },
+      "get": {
+        "operationId": "SalesController_list_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO 8601 lower bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO 8601 upper bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "staff_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "shift_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_method",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cash",
+                "card",
+                "bank_transfer"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Receipt number search",
+            "schema": {
+              "pattern": "^\\d{1,9}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SaleListItemDto"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/PageMetaDto"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List completed sales",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/payment-options": {
+      "get": {
+        "operationId": "SalesController_paymentOptions_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentOptionsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List enabled payment methods and accounts",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/summary": {
+      "get": {
+        "operationId": "SalesController_summary_v1",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (1-based, maximum 10000)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "page_size",
+            "required": false,
+            "in": "query",
+            "description": "Rows per page (maximum 100)",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO 8601 lower bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO 8601 upper bound for created_at",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "staff_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "shift_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_method",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "cash",
+                "card",
+                "bank_transfer"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Receipt number search",
+            "schema": {
+              "pattern": "^\\d{1,9}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSummaryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Summarise sales in a date range or shift",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/{id}": {
+      "get": {
+        "operationId": "SalesController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a completed sale",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/{id}/receipt-prints": {
+      "post": {
+        "operationId": "SalesController_printReceipt_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a receipt print or reprint",
+        "tags": [
+          "Sales"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Stocktake store Inventory & POS API",
+    "description": "stocktake store-scoped inventory and point-of-sale API for the single-store pilot.",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "staff_code": {
+            "type": "string",
+            "example": "ADMIN001"
+          },
+          "pin": {
+            "type": "string",
+            "example": "246810"
+          }
+        },
+        "required": [
+          "staff_code",
+          "pin"
+        ]
+      },
+      "AuthStaffDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Computed from first_name and last_name."
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ]
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "must_change_pin": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "first_name",
+          "last_name",
+          "role",
+          "store_id",
+          "must_change_pin"
+        ]
+      },
+      "LoginResponseDto": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string"
+          },
+          "token_type": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expires_in": {
+            "type": "number",
+            "example": 28800
+          },
+          "staff": {
+            "$ref": "#/components/schemas/AuthStaffDto"
+          }
+        },
+        "required": [
+          "access_token",
+          "token_type",
+          "expires_in",
+          "staff"
+        ]
+      },
+      "LogoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "MeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Computed from first_name and last_name."
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ]
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "must_change_pin": {
+            "type": "boolean"
+          },
+          "active_shift_id": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "first_name",
+          "last_name",
+          "role",
+          "store_id",
+          "must_change_pin"
+        ]
+      },
+      "ChangePinDto": {
+        "type": "object",
+        "properties": {
+          "current_pin": {
+            "type": "string"
+          },
+          "new_pin": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_pin",
+          "new_pin"
+        ]
+      },
+      "PageMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number",
+            "example": 1
+          },
+          "page_size": {
+            "type": "number",
+            "example": 25
+          },
+          "total": {
+            "type": "number",
+            "example": 42
+          },
+          "total_pages": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "page",
+          "page_size",
+          "total",
+          "total_pages"
+        ]
+      },
+      "AuditLogActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "staff_code": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "staff_code",
+          "role"
+        ]
+      },
+      "AuditLogResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string"
+          },
+          "entity_type": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "actor": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditLogActorDto"
+              }
+            ]
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "action",
+          "entity_type"
+        ]
+      },
+      "AuditLogActionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "actions"
+        ]
+      },
+      "StaffResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "staff_code": {
+            "type": "string"
+          },
+          "first_name": {
+            "type": "string"
+          },
+          "last_name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Computed from first_name and last_name."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "must_change_pin": {
+            "type": "boolean"
+          },
+          "is_locked": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "staff_code",
+          "first_name",
+          "last_name",
+          "phone",
+          "name",
+          "role",
+          "active",
+          "must_change_pin",
+          "is_locked",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateStaffDto": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "example": "Ada"
+          },
+          "last_name": {
+            "type": "string",
+            "example": "Okafor"
+          },
+          "phone": {
+            "type": "string",
+            "example": "08031234567",
+            "description": "Nigerian mobile number. Accepts 0803…, 234803… or +234803…; stored as +234XXXXXXXXXX."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ],
+            "default": "cashier"
+          }
+        },
+        "required": [
+          "first_name",
+          "last_name",
+          "phone"
+        ]
+      },
+      "StaffWithTemporaryPinDto": {
+        "type": "object",
+        "properties": {
+          "staff": {
+            "$ref": "#/components/schemas/StaffResponseDto"
+          },
+          "temporary_pin": {
+            "type": "string",
+            "description": "Shown once. The staff member must change it at next login."
+          }
+        },
+        "required": [
+          "staff",
+          "temporary_pin"
+        ]
+      },
+      "UpdateStaffDto": {
+        "type": "object",
+        "properties": {
+          "first_name": {
+            "type": "string",
+            "example": "Ada"
+          },
+          "last_name": {
+            "type": "string",
+            "example": "Okafor"
+          },
+          "phone": {
+            "type": "string",
+            "example": "08031234567"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "cashier",
+              "manager",
+              "admin"
+            ]
+          }
+        }
+      },
+      "ActingPinDto": {
+        "type": "object",
+        "properties": {
+          "acting_pin": {
+            "type": "string",
+            "description": "The caller's own current PIN"
+          }
+        },
+        "required": [
+          "acting_pin"
+        ]
+      },
+      "StoreResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "object",
+            "nullable": true
+          },
+          "phone": {
+            "type": "object",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "receipt_footer": {
+            "type": "object",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "timezone",
+          "active",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateStoreDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "receipt_footer": {
+            "type": "string"
+          }
+        }
+      },
+      "ClockInDto": {
+        "type": "object",
+        "properties": {
+          "opening_float": {
+            "type": "number",
+            "description": "Opening float in minor units"
+          },
+          "opening_notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "opening_float"
+        ]
+      },
+      "ShiftResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "staff_id": {
+            "type": "string"
+          },
+          "clock_in_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clock_out_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "opening_float": {
+            "type": "number"
+          },
+          "closing_cash_counted": {
+            "type": "object",
+            "nullable": true
+          },
+          "opening_notes": {
+            "type": "object",
+            "nullable": true
+          },
+          "closing_notes": {
+            "type": "object",
+            "nullable": true
+          },
+          "closed_by_staff_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "close_reason": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "forced",
+              "handover"
+            ],
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "staff_id",
+          "clock_in_at",
+          "opening_float",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ClockOutDto": {
+        "type": "object",
+        "properties": {
+          "closing_cash_counted": {
+            "type": "number",
+            "description": "Counted cash in minor units"
+          },
+          "closing_notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "closing_cash_counted"
+        ]
+      },
+      "ForceCloseDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "closing_cash_counted": {
+            "type": "number",
+            "description": "Counted cash in minor units"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "name",
+          "active",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Beverages"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Beverages"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "barcode": {
+            "type": "object",
+            "nullable": true
+          },
+          "image_key": {
+            "type": "object",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "category_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string"
+          },
+          "current_price": {
+            "type": "number"
+          },
+          "cost_price": {
+            "type": "object",
+            "nullable": true,
+            "description": "Omitted entirely for cashiers"
+          },
+          "stock_quantity": {
+            "type": "number",
+            "description": "Read-only stock quantity cache"
+          },
+          "reorder_threshold": {
+            "type": "number"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "sku",
+          "name",
+          "unit",
+          "current_price",
+          "stock_quantity",
+          "reorder_threshold",
+          "active",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "ItemUnitsResponseDto": {
+        "type": "object",
+        "properties": {
+          "units": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "units"
+        ]
+      },
+      "PriceHistoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "old_price": {
+            "type": "number"
+          },
+          "new_price": {
+            "type": "number"
+          },
+          "changed_by_staff_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "changed_by_name": {
+            "type": "object",
+            "nullable": true
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "item_id",
+          "old_price",
+          "new_price",
+          "changed_at"
+        ]
+      },
+      "ItemUnit": {
+        "type": "string",
+        "enum": [
+          "piece",
+          "pair",
+          "set",
+          "dozen",
+          "pack",
+          "box",
+          "carton",
+          "case",
+          "bag",
+          "sachet",
+          "roll",
+          "bottle",
+          "can",
+          "jar",
+          "tin",
+          "tube"
+        ]
+      },
+      "CreateItemDto": {
+        "type": "object",
+        "properties": {
+          "barcode": {
+            "type": "object",
+            "nullable": true,
+            "description": "Exact scan code. An empty string is stored as null."
+          },
+          "name": {
+            "type": "string",
+            "example": "Coca-Cola 50cl"
+          },
+          "category_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "unit": {
+            "example": "piece",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ItemUnit"
+              }
+            ]
+          },
+          "current_price": {
+            "type": "number",
+            "description": "Selling price in integer minor units"
+          },
+          "cost_price": {
+            "type": "object",
+            "description": "Cost price in integer minor units (manager/admin only)",
+            "nullable": true
+          },
+          "reorder_threshold": {
+            "type": "number",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "name",
+          "unit",
+          "current_price"
+        ]
+      },
+      "UpdateItemDto": {
+        "type": "object",
+        "properties": {
+          "barcode": {
+            "type": "object",
+            "nullable": true,
+            "description": "Exact scan code. An empty string is stored as null."
+          },
+          "name": {
+            "type": "string",
+            "example": "Coca-Cola 50cl"
+          },
+          "category_id": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "unit": {
+            "example": "piece",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ItemUnit"
+              }
+            ]
+          },
+          "cost_price": {
+            "type": "object",
+            "description": "Cost price in integer minor units (manager/admin only)",
+            "nullable": true
+          },
+          "reorder_threshold": {
+            "type": "number",
+            "default": 0
+          },
+          "active": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "ChangeItemPriceDto": {
+        "type": "object",
+        "properties": {
+          "new_price": {
+            "type": "number",
+            "description": "New selling price in integer minor units"
+          }
+        },
+        "required": [
+          "new_price"
+        ]
+      },
+      "ImageVariantUrlsDto": {
+        "type": "object",
+        "properties": {
+          "thumb": {
+            "type": "string"
+          },
+          "full": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "thumb",
+          "full"
+        ]
+      },
+      "ItemImageResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "image_key": {
+            "type": "object",
+            "nullable": true
+          },
+          "variants": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageVariantUrlsDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "item_id"
+        ]
+      },
+      "InitialStockDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Optional note; reason is required"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Opening quantity",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "StockMovementResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "quantity_change": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "restock",
+              "sale",
+              "refund",
+              "adjustment",
+              "damage"
+            ]
+          },
+          "sale_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "refund_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "staff_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "note": {
+            "type": "object",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "item_id",
+          "quantity_change",
+          "reason",
+          "created_at"
+        ]
+      },
+      "ReceiveStockDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Optional note; reason is required"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Received quantity",
+            "minimum": 1
+          },
+          "supplier_name": {
+            "type": "string",
+            "description": "Recorded in audit details only; no supplier table"
+          },
+          "delivery_reference": {
+            "type": "string",
+            "description": "Recorded in audit details only; no delivery table"
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "AdjustStockDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Optional note; reason is required"
+          },
+          "quantity_change": {
+            "type": "number",
+            "description": "Signed quantity change; must be non-zero",
+            "example": -3
+          }
+        },
+        "required": [
+          "quantity_change"
+        ]
+      },
+      "DamageStockDto": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Optional note; reason is required"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Damaged quantity (stored as negative)",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "StockStatusResponseDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "stock_quantity": {
+            "type": "number"
+          },
+          "has_movements": {
+            "type": "boolean"
+          },
+          "opening_stock_allowed": {
+            "type": "boolean"
+          },
+          "receive_allowed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "item_id",
+          "active",
+          "stock_quantity",
+          "has_movements",
+          "opening_stock_allowed",
+          "receive_allowed"
+        ]
+      },
+      "ReconciliationItemDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "stock_quantity": {
+            "type": "number"
+          },
+          "movement_total": {
+            "type": "number"
+          },
+          "difference": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "item_id",
+          "sku",
+          "name",
+          "stock_quantity",
+          "movement_total",
+          "difference"
+        ]
+      },
+      "StoreStockMovementResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "quantity_change": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "initial",
+              "restock",
+              "sale",
+              "refund",
+              "adjustment",
+              "damage"
+            ]
+          },
+          "sale_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "refund_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "staff_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "note": {
+            "type": "object",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "item_name": {
+            "type": "string"
+          },
+          "item_sku": {
+            "type": "string"
+          },
+          "staff_name": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "item_id",
+          "quantity_change",
+          "reason",
+          "created_at",
+          "item_name",
+          "item_sku"
+        ]
+      },
+      "PosAccountResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "pos_terminal",
+              "bank_account"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "created_by_staff_id": {
+            "type": "object",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "label",
+          "type",
+          "active",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreatePosAccountDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Front Counter POS"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "pos_terminal",
+              "bank_account"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "description": "Label-level hint only, e.g. \"GTBank ending 4821\"",
+            "nullable": true,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "label",
+          "type"
+        ]
+      },
+      "UpdatePosAccountDto": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "Front Counter POS"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "pos_terminal",
+              "bank_account"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "description": "Label-level hint only; send null to clear",
+            "nullable": true,
+            "maxLength": 200
+          }
+        }
+      },
+      "CreateSaleItemDto": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        },
+        "required": [
+          "item_id",
+          "quantity"
+        ]
+      },
+      "SaleItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "item_id": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "tax_amount": {
+            "type": "number"
+          },
+          "line_total": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "item_id",
+          "sku",
+          "name",
+          "unit",
+          "unit_price",
+          "quantity",
+          "tax_amount",
+          "line_total"
+        ]
+      },
+      "SalePaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ]
+          },
+          "amount": {
+            "type": "number"
+          },
+          "pos_account_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "account_label": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "method",
+          "amount"
+        ]
+      },
+      "ReceiptStoreDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "currency": {
+            "type": "string"
+          },
+          "receipt_footer": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "currency"
+        ]
+      },
+      "PaymentAccountOptionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ]
+      },
+      "PaymentMethodOptionDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ]
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PaymentAccountOptionDto"
+            }
+          }
+        },
+        "required": [
+          "method",
+          "accounts"
+        ]
+      },
+      "SalesSummaryPaymentMethodDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ]
+          },
+          "count": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "count",
+          "amount"
+        ]
+      },
+      "CreateSaleDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateSaleItemDto"
+            }
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ]
+          },
+          "pos_account_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expected_total": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Client-computed total in integer kobo, used as a sanity check"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 64,
+            "description": "Repeating the same key returns the original sale"
+          }
+        },
+        "required": [
+          "items",
+          "payment_method",
+          "expected_total"
+        ]
+      },
+      "SaleResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "receipt_number": {
+            "type": "number"
+          },
+          "shift_id": {
+            "type": "string"
+          },
+          "staff_id": {
+            "type": "string"
+          },
+          "staff_name": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "tax_total": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ],
+            "nullable": true
+          },
+          "item_count": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaleItemResponseDto"
+            }
+          },
+          "payment": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SalePaymentResponseDto"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "receipt_number",
+          "shift_id",
+          "staff_id",
+          "staff_name",
+          "subtotal",
+          "tax_total",
+          "total",
+          "item_count",
+          "created_at",
+          "items",
+          "payment"
+        ]
+      },
+      "PaymentOptionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "cash": {
+            "$ref": "#/components/schemas/PaymentMethodOptionDto"
+          },
+          "card": {
+            "$ref": "#/components/schemas/PaymentMethodOptionDto"
+          },
+          "bank_transfer": {
+            "$ref": "#/components/schemas/PaymentMethodOptionDto"
+          }
+        },
+        "required": [
+          "cash"
+        ]
+      },
+      "SalesSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "sale_count": {
+            "type": "number"
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "tax_total": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "by_payment_method": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesSummaryPaymentMethodDto"
+            }
+          }
+        },
+        "required": [
+          "sale_count",
+          "subtotal",
+          "tax_total",
+          "total",
+          "by_payment_method"
+        ]
+      },
+      "SaleListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "store_id": {
+            "type": "string"
+          },
+          "receipt_number": {
+            "type": "number"
+          },
+          "shift_id": {
+            "type": "string"
+          },
+          "staff_id": {
+            "type": "string"
+          },
+          "staff_name": {
+            "type": "string"
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "tax_total": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ],
+            "nullable": true
+          },
+          "item_count": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "store_id",
+          "receipt_number",
+          "shift_id",
+          "staff_id",
+          "staff_name",
+          "subtotal",
+          "tax_total",
+          "total",
+          "item_count",
+          "created_at"
+        ]
+      },
+      "ReceiptResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "print_number": {
+            "type": "number"
+          },
+          "is_copy": {
+            "type": "boolean"
+          },
+          "printed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sale": {
+            "$ref": "#/components/schemas/SaleResponseDto"
+          },
+          "store": {
+            "$ref": "#/components/schemas/ReceiptStoreDto"
+          }
+        },
+        "required": [
+          "id",
+          "print_number",
+          "is_copy",
+          "printed_at",
+          "sale",
+          "store"
+        ]
+      }
+    }
+  }
+}

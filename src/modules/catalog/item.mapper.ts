@@ -1,9 +1,18 @@
+import { Prisma } from '../../generated/prisma/client.js';
 import type { StaffRole } from '../../generated/prisma/enums.js';
-import type { ItemModel, PriceHistoryModel } from '../../generated/prisma/models.js';
+import type { ItemModel } from '../../generated/prisma/models.js';
 import type {
   ItemResponseDto,
   PriceHistoryResponseDto,
 } from './dto/item.dto.js';
+
+type PriceHistoryWithStaff = Prisma.PriceHistoryGetPayload<{
+  include: {
+    changed_by: {
+      select: { id: true; first_name: true; last_name: true };
+    };
+  };
+}>;
 
 export function toItemResponse(
   item: ItemModel,
@@ -34,7 +43,7 @@ export function toItemResponse(
 }
 
 export function toPriceHistoryResponse(
-  entry: PriceHistoryModel,
+  entry: PriceHistoryWithStaff,
 ): PriceHistoryResponseDto {
   return {
     id: entry.id,
@@ -42,6 +51,9 @@ export function toPriceHistoryResponse(
     old_price: entry.old_price,
     new_price: entry.new_price,
     changed_by_staff_id: entry.changed_by_staff_id,
+    changed_by_name: entry.changed_by
+      ? `${entry.changed_by.first_name} ${entry.changed_by.last_name}`
+      : null,
     changed_at: entry.changed_at,
   };
 }

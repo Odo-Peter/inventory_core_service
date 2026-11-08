@@ -30,6 +30,8 @@ export const AUDIT_ACTIONS = {
   posAccountCreated: 'pos_account.created',
   posAccountUpdated: 'pos_account.updated',
   posAccountDeactivated: 'pos_account.deactivated',
+  saleCreated: 'sale.created',
+  saleReceiptReprinted: 'sale.receipt_reprinted',
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

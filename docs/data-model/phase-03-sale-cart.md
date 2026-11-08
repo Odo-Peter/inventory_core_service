@@ -13,6 +13,34 @@ Read `00-global-conventions.md` first. Implement **only** the models in this doc
 
 Phase 3 delivers draft carts only. Payments, receipts and finalization endpoints arrive in Phases 4–5, but the stock-on-finalize routine described in §4 is designed here so those phases reuse it.
 
+> **Implementation note (2026-11-08):** the shipped code uses a smaller,
+> completed-sale model instead of persisted draft carts. The migration is
+> `20261108145651_phase_03_sales`; payments and receipt printing shipped in the
+> same `sales` module. The field-level differences are listed below. The rest of
+> this document remains the original build-plan reference.
+
+## 0. Implemented deviations from this plan
+
+| Planned | Implemented | Reason |
+| --- | --- | --- |
+| `SaleStatus` draft/paid/voided/refunded lifecycle | `Sale` rows are completed at creation; no status column | Checkout records a paid sale atomically in v1; drafts, voids, and refunds are deferred. |
+| `client_ref` idempotency | `idempotency_key` unique per store | Same retry-safety goal, named for the API contract. A repeat returns the original sale; reuse by another staff member is rejected. |
+| `shift_id` nullable | `shift_id` required | Recording a sale requires the author's open shift (ADR 0010). |
+| `discount_total`, line discounts, `note`, `updated_at`, `paid_at`, `voided_*` | Not present | Discounts, voids, and mutable drafts are out of scope for the first completed-sale release. |
+| `item_name_at_sale`, `sku_at_sale`, `unit_price_at_sale` | `name`, `sku`, `unit`, `unit_price`, `tax_amount` | The shorter snapshot field names are used consistently by the sales API. `unit` is also snapshotted. |
+| Per-line timestamps | None | Completed sale lines are immutable and have no mutable lifecycle. |
+| Client never sends totals | Client sends `expected_total` | Used only as a stale-cart check; the server recomputes the authoritative total and rejects a mismatch with `total_mismatch`. |
+| Stock written during a finalize step | Stock written in the same transaction as sale creation | There is no draft stage, so creating the completed sale is the finalize step. Item rows are locked in ascending `id` order and decremented with a non-negative guard. |
+| Receipt counter proposed separately | `Store.sale_counter` allocates `Sale.receipt_number` | Gives each store a gapless, unique receipt number inside the sale transaction. |
+| Audit actions for each cart mutation | `sale.created` plus `sale.receipt_reprinted` | There are no cart mutations to audit; reprints are audited separately. |
+
+DB-level differences: amount/formula checks are replaced by server-side integer
+validation (`sale_total_too_large`) and the `BEFORE UPDATE OR DELETE` immutability
+trigger on `Sale`, `SaleItem`, and `Payment`. `StockMovement.sale_id` is now a
+real FK with `ON DELETE SET NULL`, although deleting a sale is blocked by the
+trigger. The acceptance checklist in §5 describes the draft-cart plan; the
+completed-sale equivalents live in `test/sales.e2e-spec.ts`.
+
 ## 1. Prisma schema
 
 ```prisma

@@ -38,7 +38,7 @@ export class ItemImagesService {
   ): Promise<ItemImageResponseDto> {
     const item = await this.findScopedItem(principal, itemId);
     const processed = await this.process(file);
-    const key = `items/${principal.store_id}/${item.id}/${randomUUID()}`;
+    const key = `stocktake/items/${principal.store_id}/${itemId}/${randomUUID()}`;
 
     try {
       await this.storage.upload(key, processed, 'image/webp');

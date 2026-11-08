@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
-import { SalesService } from './sales.service.js';
+
+import { AuditModule } from '../audit/audit.module.js';
+import { InventoryModule } from '../inventory/inventory.module.js';
 import { SalesController } from './sales.controller.js';
+import { SalesService } from './sales.service.js';
 
 @Module({
+  imports: [AuditModule, InventoryModule],
   controllers: [SalesController],
   providers: [SalesService],
 })

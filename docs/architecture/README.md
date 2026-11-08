@@ -17,8 +17,8 @@ This directory contains the agreed architecture decisions for the Inventory Web 
 | [0005](0005-data-model-and-store-scope.md) | Data conventions and store isolation | Accepted |
 | [0006](0006-transaction-integrity-and-idempotency.md) | Transaction integrity and retry safety | Accepted |
 | [0007](0007-inventory-and-stock-controls.md) | Inventory movements, counts, and stock enforcement | Accepted |
-| [0008](0008-sales-pricing-and-tax.md) | Sales, pricing, tax, and currency | Accepted; tax rules TBD |
-| [0009](0009-payments-and-receipts.md) | Payment recording and receipts | Accepted |
+| [0008](0008-sales-pricing-and-tax.md) | Sales, pricing, tax, and currency | Accepted; implemented, tax rules TBD |
+| [0009](0009-payments-and-receipts.md) | Payment recording and receipts | Accepted; implemented |
 | [0010](0010-shifts-tills-and-daily-close.md) | Tills, shifts, and daily close | Accepted |
 | [0011](0011-audit-and-record-retention.md) | Auditability and retention | Accepted; compliance retention TBD |
 | [0012](0012-testing-and-quality.md) | Testing strategy | Accepted |

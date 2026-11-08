@@ -15,6 +15,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { InventoryModule } from './modules/inventory/inventory.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
+import { SalesModule } from './modules/sales/sales.module.js';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -116,6 +117,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     CatalogModule,
     InventoryModule,
     PaymentsModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

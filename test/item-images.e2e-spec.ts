@@ -99,7 +99,7 @@ describe('Item images (e2e)', () => {
 
     expect(response.body.item_id).toBe(item.id);
     expect(response.body.image_key).toMatch(
-      new RegExp(`^items/${storeId}/${item.id}/[0-9a-f-]+$`),
+      new RegExp(`^stocktake\/items\/${storeId}\/${item.id}\/[0-9a-f-]+$`),
     );
     expect(response.body.variants).toEqual({
       thumb: `https://images.test/thumb/${response.body.image_key}`,

@@ -1,0 +1,930 @@
+{
+  "generated_at": "2026-11-08T17:14:27.812Z",
+  "roles": [
+    "cashier",
+    "manager",
+    "admin"
+  ],
+  "hierarchy": "inclusive",
+  "endpointCount": 59,
+  "openapiOperationCount": 59,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1",
+      "tag": "App",
+      "minRole": "public",
+      "effectiveRoles": [
+        "public"
+      ],
+      "public": true,
+      "summary": "",
+      "notes": "Root hello endpoint."
+    },
+    {
+      "method": "GET",
+      "path": "/health/live",
+      "tag": "Health",
+      "minRole": "public",
+      "effectiveRoles": [
+        "public"
+      ],
+      "public": true,
+      "summary": "",
+      "notes": "Liveness probe; version-neutral."
+    },
+    {
+      "method": "GET",
+      "path": "/health/ready",
+      "tag": "Health",
+      "minRole": "public",
+      "effectiveRoles": [
+        "public"
+      ],
+      "public": true,
+      "summary": "",
+      "notes": "Readiness probe, including database ping; version-neutral."
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "tag": "Health",
+      "minRole": "public",
+      "effectiveRoles": [
+        "public"
+      ],
+      "public": true,
+      "summary": "",
+      "notes": "Alias of the readiness probe; version-neutral."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "tag": "auth",
+      "minRole": "public",
+      "effectiveRoles": [
+        "public"
+      ],
+      "public": true,
+      "summary": "Log in with a staff code and PIN",
+      "notes": "Throttled per IP and per staff_code. Returns access_token and staff."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "tag": "auth",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Log out and revoke all tokens",
+      "notes": "Allowed while must_change_pin. Revokes all tokens (token_version++)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "tag": "auth",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get the current staff member",
+      "notes": "Blocked while must_change_pin (403 pin_change_required). active_shift_id is always null for admins."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/change-pin",
+      "tag": "auth",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Change the current staff PIN",
+      "notes": "Allowed while must_change_pin. Returns LoginResponseDto with a new token and increments token_version."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-logs",
+      "tag": "audit",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "List audit log entries for the current store",
+      "notes": "Store-scoped; no per-record role filtering."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit-logs/actions",
+      "tag": "audit",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "List the known audit actions",
+      "notes": "Static list of known audit actions."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/staff",
+      "tag": "staff",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List staff in the current store",
+      "notes": "Lists staff in the caller store."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff",
+      "tag": "staff",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Create a staff member with a temporary PIN",
+      "notes": "Creates a staff member with a temporary PIN; must_change_pin is true."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/staff/{id}",
+      "tag": "staff",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get a staff member",
+      "notes": "Store-scoped; no per-record role filtering."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/staff/{id}",
+      "tag": "staff",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Update a staff profile or role",
+      "notes": "Cannot change own role; role change needs no open shift; promotion from cashier sets must_change_pin; last active admin is protected."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff/{id}/deactivate",
+      "tag": "staff",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Deactivate a staff member",
+      "notes": "Cannot deactivate self or the last active admin; revokes target tokens (token_version++)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff/{id}/reactivate",
+      "tag": "staff",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Reactivate a staff member",
+      "notes": "Reactivates a deactivated staff member."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff/{id}/reset-pin",
+      "tag": "staff",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Reset a staff PIN with the caller PIN",
+      "notes": "Manager may target cashiers only; admin may target any other staff; self is blocked. Sets must_change_pin and revokes target tokens."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/staff/{id}/unlock",
+      "tag": "staff",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Unlock a staff account",
+      "notes": "Manager may target cashiers only; admin may target any other staff; self is blocked. Revokes target tokens."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/stores/current",
+      "tag": "stores",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get the current store",
+      "notes": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/stores/current",
+      "tag": "stores",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Update editable store details",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shifts/clock-in",
+      "tag": "shifts",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager"
+      ],
+      "public": false,
+      "summary": "Open a shift",
+      "notes": "Admin is denied by @DenyRoles (403 forbidden). Opens the caller own shift."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shifts/clock-out",
+      "tag": "shifts",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager"
+      ],
+      "public": false,
+      "summary": "Close your open shift",
+      "notes": "Admin is denied by @DenyRoles (403 forbidden). Closes the caller own shift only."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shifts/current",
+      "tag": "shifts",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get your open shift",
+      "notes": "Returns ShiftResponseDto or null."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/shifts",
+      "tag": "shifts",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List shifts",
+      "notes": "Lists shifts in the caller store."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shifts/{id}/force-close",
+      "tag": "shifts",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Force-close an open shift",
+      "notes": "Manager may force-close cashier shifts only; admin may force-close any open store shift."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/categories",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List categories",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/categories",
+      "tag": "Catalog",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Create a category",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/categories/{id}",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get a category",
+      "notes": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/categories/{id}",
+      "tag": "Catalog",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Update a category",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/items",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List catalog items",
+      "notes": "cashier responses omit cost_price; manager/admin responses include it."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/items",
+      "tag": "Catalog",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Create a catalog item with zero stock and an optional image (SKU is generated)",
+      "notes": "Creates an item with zero stock; optional multipart image."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/items/units",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List item units dropdowns",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/items/barcode/{barcode}",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Look up an item by exact barcode",
+      "notes": "Store-scoped exact barcode lookup. cashier responses omit cost_price."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/items/{id}",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get a catalog item",
+      "notes": "cashier responses omit cost_price; manager/admin responses include it."
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/items/{id}",
+      "tag": "Catalog",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Update catalog item details (not price or stock)",
+      "notes": "Changing active requires admin even though manager can call the route (403 forbidden)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/items/{id}/price-history",
+      "tag": "Catalog",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List price history for an item",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/items/{id}/price",
+      "tag": "Catalog",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Change an item price",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/items/{id}/deactivate",
+      "tag": "Catalog",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Deactivate a catalog item",
+      "notes": "Admin-only shortcut; active changes via PATCH also require admin."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/items/{id}/image",
+      "tag": "Catalog",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Upload or replace an item image",
+      "notes": "Multipart image upload or replacement; returns image_key and thumb/full variants."
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/items/{id}/image",
+      "tag": "Catalog",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Remove an item image (idempotent)",
+      "notes": "Idempotent removal; variants is null when no image remains."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/items/{id}/initial",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Record opening stock once for an item",
+      "notes": "Opening stock can be recorded once per item."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/items/{id}/receive",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Receive stock for an item",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/items/{id}/adjust",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Adjust stock by a signed quantity",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/inventory/items/{id}/damage",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Record damaged stock",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/items/{id}/movements",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List stock movements for an item",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/items/{id}/stock-status",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Whether opening stock is still allowed for an item (read-only)",
+      "notes": "Read-only; reports whether opening stock is still allowed."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/reconciliation",
+      "tag": "Inventory",
+      "minRole": "admin",
+      "effectiveRoles": [
+        "admin"
+      ],
+      "public": false,
+      "summary": "Detect stock cache drift (read-only)",
+      "notes": "Method-level admin overrides the class-level manager requirement."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/inventory/movements",
+      "tag": "Inventory",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List stock movements across the store",
+      "notes": "Store-wide movement list."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pos-accounts",
+      "tag": "POS Accounts",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List POS accounts",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pos-accounts",
+      "tag": "POS Accounts",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Create a POS account",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pos-accounts/{id}",
+      "tag": "POS Accounts",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get a POS account",
+      "notes": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/pos-accounts/{id}",
+      "tag": "POS Accounts",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Update a POS account",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pos-accounts/{id}/deactivate",
+      "tag": "POS Accounts",
+      "minRole": "manager",
+      "effectiveRoles": [
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Deactivate a POS account",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sales",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Record a completed sale and its payment",
+      "notes": "Requires the caller own open shift; admins are allowed by the decorator but cannot clock in. Server computes totals and deducts stock."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sales",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List completed sales",
+      "notes": "cashier sees own sales only; manager/admin see the whole store and may filter staff_id."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sales/payment-options",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "List enabled payment methods and accounts",
+      "notes": "card and bank_transfer are omitted when no active account exists."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sales/summary",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Summarise sales in a date range or shift",
+      "notes": "cashier summary is scoped to own sales only."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sales/{id}",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get a completed sale",
+      "notes": "cashier gets 404 sale_not_found for another cashier sale."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sales/{id}/receipt-prints",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Record a receipt print or reprint",
+      "notes": "cashier can print own sales only; first print is_copy=false, later prints is_copy=true."
+    }
+  ],
+  "roleBehaviors": [
+    {
+      "endpoint": "GET /items",
+      "role": "cashier",
+      "behavior": "cost_price is omitted from item responses; manager and admin responses include it.",
+      "source": "src/modules/catalog/item.mapper.ts:41-43"
+    },
+    {
+      "endpoint": "GET /items/{id}",
+      "role": "cashier",
+      "behavior": "cost_price is omitted from the item response; manager and admin responses include it.",
+      "source": "src/modules/catalog/item.mapper.ts:41-43"
+    },
+    {
+      "endpoint": "GET /items/barcode/{barcode}",
+      "role": "cashier",
+      "behavior": "cost_price is omitted from the item response; manager and admin responses include it.",
+      "source": "src/modules/catalog/item.mapper.ts:41-43"
+    },
+    {
+      "endpoint": "PATCH /items/{id}",
+      "role": "manager",
+      "behavior": "Changing active is rejected with 403 forbidden; admins may change active. Different active value triggers the check.",
+      "source": "src/modules/catalog/items.service.ts:264-270"
+    },
+    {
+      "endpoint": "GET /sales",
+      "role": "cashier",
+      "behavior": "List is forced to the caller staff_id. Managers/admins see all store sales and may filter by staff_id.",
+      "source": "src/modules/sales/sales.service.ts:533-537"
+    },
+    {
+      "endpoint": "GET /sales/summary",
+      "role": "cashier",
+      "behavior": "Summary aggregates only the caller own sales. Managers/admins aggregate the whole store.",
+      "source": "src/modules/sales/sales.service.ts:533-537"
+    },
+    {
+      "endpoint": "GET /sales/{id}",
+      "role": "cashier",
+      "behavior": "A sale owned by another cashier is returned as 404 sale_not_found. Managers/admins can read any store sale.",
+      "source": "src/modules/sales/sales.service.ts:479-481"
+    },
+    {
+      "endpoint": "POST /sales/{id}/receipt-prints",
+      "role": "cashier",
+      "behavior": "Printing another cashier sale is returned as 404 sale_not_found. Managers/admins can print any store sale.",
+      "source": "src/modules/sales/sales.service.ts:479-481"
+    },
+    {
+      "endpoint": "POST /shifts/clock-in",
+      "role": "admin",
+      "behavior": "Denied with 403 forbidden by @DenyRoles and the service guard; cashier and manager may clock in.",
+      "source": "src/modules/shifts/shifts.controller.ts:41-44; src/modules/shifts/shifts.service.ts:356-362"
+    },
+    {
+      "endpoint": "POST /shifts/clock-out",
+      "role": "admin",
+      "behavior": "Denied with 403 forbidden by @DenyRoles and the service guard; cashier and manager may clock out.",
+      "source": "src/modules/shifts/shifts.controller.ts:55-58; src/modules/shifts/shifts.service.ts:356-362"
+    },
+    {
+      "endpoint": "POST /shifts/{id}/force-close",
+      "role": "manager",
+      "behavior": "Managers may force-close only shifts whose staff member is a cashier. Admins may force-close any open shift in the store.",
+      "source": "src/modules/shifts/shifts.service.ts:263-295"
+    },
+    {
+      "endpoint": "PATCH /staff/{id}",
+      "role": "admin",
+      "behavior": "An admin cannot change their own role (403 forbidden). Promotion from cashier to manager/admin sets must_change_pin; last active admin is protected.",
+      "source": "src/modules/users/users.service.ts:132-142, 526-549"
+    },
+    {
+      "endpoint": "POST /staff/{id}/deactivate",
+      "role": "admin",
+      "behavior": "An admin cannot deactivate themself (403 forbidden) or the last active admin (409 last_admin).",
+      "source": "src/modules/users/users.service.ts:249-257, 526-549"
+    },
+    {
+      "endpoint": "POST /staff/{id}/reset-pin",
+      "role": "manager",
+      "behavior": "Managers may target cashiers only; admins may target any other staff member; self is blocked with 403 forbidden.",
+      "source": "src/modules/users/users.service.ts:457-481"
+    },
+    {
+      "endpoint": "POST /staff/{id}/unlock",
+      "role": "manager",
+      "behavior": "Managers may target cashiers only; admins may target any other staff member; self is blocked with 403 forbidden.",
+      "source": "src/modules/users/users.service.ts:457-481"
+    },
+    {
+      "endpoint": "GET /auth/me",
+      "role": "admin",
+      "behavior": "active_shift_id is always null for admins; cashier/manager receive their open shift id or null.",
+      "source": "src/modules/auth/auth.service.ts:196-210"
+    }
+  ],
+  "authMe": {
+    "fields": [
+      "id",
+      "name",
+      "first_name",
+      "last_name",
+      "role",
+      "store_id",
+      "must_change_pin",
+      "active_shift_id"
+    ],
+    "fieldTypes": {
+      "id": "string",
+      "name": "string",
+      "first_name": "string",
+      "last_name": "string",
+      "role": "cashier | manager | admin",
+      "store_id": "string",
+      "must_change_pin": "boolean",
+      "active_shift_id": "string | null"
+    },
+    "invalidTokenStatus": 401,
+    "invalidTokenCode": "unauthorized",
+    "mustChangePin": {
+      "status": 403,
+      "code": "pin_change_required",
+      "allowed": [
+        "public routes",
+        "POST /api/v1/auth/logout",
+        "POST /api/v1/auth/change-pin"
+      ]
+    },
+    "tokenInvalidation": {
+      "logout": "increments token_version; old token returns 401 unauthorized",
+      "changePin": "increments token_version and returns a new token; old token returns 401 unauthorized",
+      "deactivate": "increments token_version and sets active=false; old token returns 401 unauthorized (version check precedes active check)",
+      "resetPin": "increments token_version; old token returns 401 unauthorized",
+      "unlock": "increments token_version; old token returns 401 unauthorized",
+      "roleChange": "does not increment token_version; current role is reloaded from the database on every request. Promotion from cashier sets must_change_pin."
+    }
+  },
+  "openQuestions": [
+    "DevicesController exists but DevicesModule is not imported, so /api/v1/devices is absent from OpenAPI. It also has no @Public/@Roles; if mounted, RolesGuard would deny every authenticated call with 403 insufficient_role.",
+    "POST /sales is available to admin via the inclusive hierarchy, but admins cannot clock in (@DenyRoles on shift clock-in). The required own open shift is therefore not obtainable through the API for an admin.",
+    "AuthService.toAuthStaff returns staff_code from GET /auth/me, but MeResponseDto and OpenAPI omit it. Confirm the intended response contract.",
+    "PATCH /staff/{id} role changes do not increment token_version. Authorization uses the freshly loaded database role, so the new role takes effect immediately, but the old token remains valid. Confirm whether role changes should revoke tokens.",
+    "OpenAPI renders MeResponseDto.active_shift_id as a nullable object rather than string|null; the DTO declares string|null."
+  ]
+}
