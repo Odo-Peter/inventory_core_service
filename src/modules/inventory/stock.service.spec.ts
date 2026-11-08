@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppException } from '../../common/errors/app.exception.js';
+import type { Prisma } from '../../generated/prisma/client.js';
 import type { StockMovementModel } from '../../generated/prisma/models.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { AuditService } from '../audit/audit.service.js';
@@ -322,5 +323,129 @@ describe('StockService.listStoreMovements', () => {
         total_pages: 0,
       },
     });
+  });
+});
+
+describe('StockService.applyMovementInTx', () => {
+  function createTx(options: {
+    active?: boolean;
+    stockQuantity?: number;
+    auditRecord?: ReturnType<typeof vi.fn>;
+  } = {}) {
+    const queryRaw = vi.fn().mockResolvedValue([
+      {
+        id: ITEM_ID,
+        stock_quantity: options.stockQuantity ?? 10,
+        active: options.active ?? true,
+      },
+    ]);
+    const movementCreate = vi
+      .fn()
+      .mockResolvedValue(buildMovement({ sale_id: null }));
+    const itemUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const tx = {
+      $queryRaw: queryRaw,
+      stockMovement: { create: movementCreate },
+      item: { updateMany: itemUpdateMany },
+    } as unknown as Prisma.TransactionClient;
+    const auditRecord = options.auditRecord ?? vi.fn().mockResolvedValue(undefined);
+    const service = new StockService(
+      {} as PrismaService,
+      { record: auditRecord } as unknown as AuditService,
+    );
+
+    return { tx, queryRaw, movementCreate, itemUpdateMany, auditRecord, service };
+  }
+
+  it('writes the movement and stock decrement without an audit row', async () => {
+    const { tx, movementCreate, itemUpdateMany, auditRecord, service } =
+      createTx();
+
+    await service.applyMovementInTx(tx, PRINCIPAL, {
+      item_id: ITEM_ID,
+      quantity_change: -2,
+      reason: 'sale',
+      sale_id: '55555555-5555-4555-8555-555555555555',
+    });
+
+    expect(movementCreate).toHaveBeenCalledWith({
+      data: {
+        store_id: PRINCIPAL.store_id,
+        item_id: ITEM_ID,
+        quantity_change: -2,
+        reason: 'sale',
+        sale_id: '55555555-5555-4555-8555-555555555555',
+        refund_id: null,
+        staff_id: PRINCIPAL.staff_id,
+        note: null,
+      },
+    });
+    expect(itemUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: ITEM_ID,
+        store_id: PRINCIPAL.store_id,
+        stock_quantity: { gte: 2 },
+      },
+      data: { stock_quantity: { ['decrement']: 2 } },
+    });
+    expect(auditRecord).not.toHaveBeenCalled();
+  });
+
+  it('writes the audit row when audit_action is set', async () => {
+    const { tx, auditRecord, service } = createTx();
+
+    await service.applyMovementInTx(tx, PRINCIPAL, {
+      item_id: ITEM_ID,
+      quantity_change: 3,
+      reason: 'restock',
+      audit_action: 'stock.received',
+      audit_details: { supplier_name: 'Acme' },
+    });
+
+    expect(auditRecord).toHaveBeenCalledTimes(1);
+    expect(auditRecord.mock.calls[0][0]).toMatchObject({
+      store_id: PRINCIPAL.store_id,
+      staff_id: PRINCIPAL.staff_id,
+      action: 'stock.received',
+      entity_type: 'Item',
+      entity_id: ITEM_ID,
+      details: {
+        supplier_name: 'Acme',
+        reason: 'restock',
+      },
+    });
+    expect(auditRecord.mock.calls[0][1]).toBe(tx);
+  });
+
+  it('requires an active item for the sale reason', async () => {
+    const { tx, movementCreate, service } = createTx({ active: false });
+
+    await expect(
+      service.applyMovementInTx(tx, PRINCIPAL, {
+        item_id: ITEM_ID,
+        quantity_change: -1,
+        reason: 'sale',
+      }),
+    ).rejects.toMatchObject({ code: 'item_inactive' });
+
+    expect(movementCreate).not.toHaveBeenCalled();
+  });
+
+  it('opens a transaction in the applyMovement wrapper', async () => {
+    const { tx, movementCreate, auditRecord } = createTx();
+    const transaction = vi.fn().mockImplementation((callback) => callback(tx));
+    const service = new StockService(
+      { $transaction: transaction } as unknown as PrismaService,
+      { record: auditRecord } as unknown as AuditService,
+    );
+
+    await service.applyMovement(PRINCIPAL, {
+      item_id: ITEM_ID,
+      quantity_change: -1,
+      reason: 'sale',
+    });
+
+    expect(transaction).toHaveBeenCalledTimes(1);
+    expect(movementCreate).toHaveBeenCalledTimes(1);
   });
 });
