@@ -18,7 +18,7 @@ Canonical Prisma-oriented data model for the Store Inventory & POS backend
 | [phase-01-store-staff-shift-audit.md](./phase-01-store-staff-shift-audit.md)       | 1     | Store, Staff, Shift, AuditLog                           |
 | [phase-02-catalog-stock-pos-accounts.md](./phase-02-catalog-stock-pos-accounts.md) | 2     | Category, Item, PriceHistory, StockMovement, POSAccount |
 | [phase-03-sale-cart.md](./phase-03-sale-cart.md)                                   | 3     | Sale, SaleItem                                          |
-| [phase-04-05-payments-receipts.md](./phase-04-05-payments-receipts.md)             | 4–5   | Payment, Receipt                                        |
+| [phase-04-05-payments-receipts.md](./phase-04-05-payments-receipts.md)             | 4–5   | Payment, ReceiptPrint                                   |
 | [phase-06-reporting.md](./phase-06-reporting.md)                                   | 6     | No new tables (aggregations)                            |
 | [phase-07-refunds.md](./phase-07-refunds.md)                                       | 7     | Refund, RefundItem                                      |
 | [phase-09-payment-transactions.md](./phase-09-payment-transactions.md)             | 9     | PaymentTransaction                                      |

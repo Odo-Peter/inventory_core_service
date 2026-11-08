@@ -1,7 +1,7 @@
 # ADR 0008: Sales, Catalog Pricing, Tax, and Currency
 
-- **Status:** Accepted; tax rules are an implementation prerequisite
-- **Date:** 2026-10-24
+- **Status:** Accepted; implemented 2026-11-08 with tax calculation deferred
+- **Date:** 2026-10-24 (accepted); 2026-11-08 (implemented)
 
 ## Context
 Receipts and historical reporting must remain stable after catalog settings change.
@@ -21,3 +21,29 @@ Receipts and historical reporting must remain stable after catalog settings chan
 - Tax jurisdiction and rounding are launch-blocking decisions for correct financial records.
 - Sale snapshots are required even when a catalog item is deactivated or repriced.
 - Currency-aware formatting must be centralized and use the configured store currency.
+
+## Implementation notes (2026-11-08)
+
+Phase 3 shipped the completed-sale path in `src/modules/sales`. The implemented
+shape is deliberately smaller than the draft-cart data model originally sketched
+for this phase:
+
+- A sale is created complete, in one transaction, from `POST /api/v1/sales`. There
+  is no draft/cart table, no `SaleStatus`, and no sale/line editing endpoints.
+- The server snapshots `sku`, `name`, `unit`, `unit_price`, `quantity`,
+  `tax_amount`, and `line_total` onto each `SaleItem`. Catalog changes after the
+  sale cannot alter receipt or reporting data.
+- Totals are always computed on the server. The client sends `expected_total`
+  only as a stale-cart sanity check; a mismatch is rejected with
+  `total_mismatch`.
+- `Store.sale_counter` allocates the per-store `Sale.receipt_number` inside the
+  sale transaction. There is no separate receipt table; receipt content is
+  derived at read time.
+- `tax_total` remains in the model but is always `0` until tax rules are agreed.
+  No tax-inclusive/exclusive setting was invented.
+- Discounts, promotions, COGS, and refunds/voids remain out of scope.
+- Money stays integer minor units (kobo) as agreed.
+
+See `docs/data-model/phase-03-sale-cart.md` and
+`docs/data-model/phase-04-05-payments-receipts.md` for the field-level
+deviations from the original phase documents.
