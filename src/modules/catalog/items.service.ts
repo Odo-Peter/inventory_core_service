@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 
 import { AppException } from '../../common/errors/app.exception.js';
 import {
@@ -122,9 +122,12 @@ export class ItemsService {
     assertValidUnit(dto.unit);
     const barcode = normalizeOptionalText(dto.barcode);
     const categoryId = dto.category_id ?? null;
+    const name = normalizeDisplayText(dto.name);
 
     // 1. Validate everything that can fail without side effects.
     const category = await this.assertCategory(principal.store_id, categoryId);
+    await this.assertNameAvailable(principal.store_id, name);
+
     if (barcode) {
       await this.assertBarcodeAvailable(principal.store_id, barcode);
     }
@@ -134,7 +137,7 @@ export class ItemsService {
     // 2. Generate the id up front so the storage key can contain it.
     const itemId = randomUUID();
     const imageKey = processed
-      ? `items/${principal.store_id}/${itemId}/${randomUUID()}`
+      ? `stocktake/items/${principal.store_id}/${itemId}/${randomUUID()}`
       : null;
 
     // 3. Store the image first. A failure here creates no item.
@@ -155,7 +158,7 @@ export class ItemsService {
             store_id: principal.store_id,
             sku,
             barcode,
-            name: normalizeDisplayText(dto.name),
+            name: name,
             category_id: categoryId,
             unit: dto.unit.trim(),
             current_price: dto.current_price,
@@ -222,7 +225,15 @@ export class ItemsService {
     }
 
     if (dto.name !== undefined) {
-      data.name = normalizeDisplayText(dto.name);
+      const newName = normalizeDisplayText(dto.name);
+      if (newName !== existing.name) {
+        await this.assertNameAvailable(
+          principal.store_id,
+          newName,
+          existing.id,
+        );
+      }
+      data.name = newName;
       changed.push('name');
     }
 
@@ -385,6 +396,7 @@ export class ItemsService {
     query: PaginationQueryDto,
   ): Promise<PriceHistoryListResponseDto> {
     await this.findScopedItem(principal, id);
+
     const page = query.page ?? DEFAULT_PAGE;
     const pageSize = query.page_size ?? DEFAULT_PAGE_SIZE;
     const where: Prisma.PriceHistoryWhereInput = { item_id: id };
@@ -393,6 +405,15 @@ export class ItemsService {
     const [entries, total] = await this.prisma.$transaction([
       this.prisma.priceHistory.findMany({
         where,
+        include: {
+          changed_by: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
         orderBy: [{ changed_at: 'desc' }, { id: 'desc' }],
         skip,
         take,
@@ -544,5 +565,30 @@ export class ItemsService {
       'sku_generation_failed',
       'Could not generate a unique SKU, please retry',
     );
+  }
+
+  private async assertNameAvailable(
+    storeId: string,
+    name: string,
+    excludeItemId?: string,
+  ): Promise<void> {
+    const normalized = normalizeDisplayText(name);
+
+    const existing = await this.prisma.item.findFirst({
+      where: {
+        store_id: storeId,
+        name: normalized,
+        ...(excludeItemId ? { id: { not: excludeItemId } } : {}),
+      },
+      select: { id: true, active: true },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        existing.active
+          ? `An active item named "${normalized}" already exists`
+          : `An item named "${normalized}" already exists (currently deactivated)`,
+      );
+    }
   }
 }

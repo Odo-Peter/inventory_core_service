@@ -211,6 +211,9 @@ export class PriceHistoryResponseDto {
   @ApiPropertyOptional({ nullable: true })
   changed_by_staff_id: string | null;
 
+  @ApiPropertyOptional({ nullable: true })
+  changed_by_name: string | null;
+
   @ApiProperty({ type: String, format: 'date-time' })
   changed_at: Date;
 }
