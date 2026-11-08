@@ -14,6 +14,7 @@ import {
   type TestContext,
 } from './helpers/test-app.js';
 import { MemoryImageStorage } from './helpers/image-storage.fake.js';
+import { randomUUID } from 'node:crypto';
 
 describe('Catalog (e2e)', () => {
   let context: TestContext;
@@ -72,7 +73,7 @@ describe('Catalog (e2e)', () => {
       .post('/api/v1/items')
       .set(bearer(token))
       .send({
-        name: overrides.name ?? 'Item',
+        name: overrides.name ?? `Item ${randomUUID()}`,
         unit: overrides.unit ?? 'piece',
         current_price: overrides.current_price ?? 1000,
         ...overrides,
@@ -539,7 +540,7 @@ describe('Catalog (e2e)', () => {
       .expect(201);
 
     expect(res.body.image_key).toMatch(
-      /^items\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+$/,
+      /^stocktake\/items\/[0-9a-f-]+\/[0-9a-f-]+\/[0-9a-f-]+$/,
     );
     expect(storage.uploads).toContain(res.body.image_key);
   });
