@@ -38,6 +38,11 @@ export class ListSalesQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
+  sale_id?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
   shift_id?: string;
 
   @ApiPropertyOptional({ enum: PaymentMethod })

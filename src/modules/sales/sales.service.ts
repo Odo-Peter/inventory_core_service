@@ -133,18 +133,12 @@ export class SalesService {
           ORDER BY "id"
           FOR UPDATE
         `);
-        const itemsById = new Map(
-          lockedItems.map((item) => [item.id, item]),
-        );
+        const itemsById = new Map(lockedItems.map((item) => [item.id, item]));
 
         const snapshots: SaleLineSnapshot[] = lines.map((line) => {
           const item = itemsById.get(line.item_id);
           if (!item) {
-            throw new AppException(
-              404,
-              'item_not_found',
-              'Item not found',
-            );
+            throw new AppException(404, 'item_not_found', 'Item not found');
           }
 
           if (!item.active) {
@@ -281,10 +275,7 @@ export class SalesService {
 
       return this.findOne(principal, saleId);
     } catch (error: unknown) {
-      if (
-        dto.idempotency_key &&
-        this.isIdempotencyKeyViolation(error)
-      ) {
+      if (dto.idempotency_key && this.isIdempotencyKeyViolation(error)) {
         const replay = await this.findIdempotentSale(
           principal,
           dto.idempotency_key,
@@ -326,10 +317,7 @@ export class SalesService {
     };
   }
 
-  async findOne(
-    principal: Principal,
-    id: string,
-  ): Promise<SaleResponseDto> {
+  async findOne(principal: Principal, id: string): Promise<SaleResponseDto> {
     return toSaleResponse(await this.findSaleDetail(principal, id));
   }
 
@@ -540,6 +528,10 @@ export class SalesService {
       where.shift_id = query.shift_id;
     }
 
+    if (query.sale_id) {
+      where.id = query.sale_id;
+    }
+
     if (query.q) {
       where.receipt_number = Number(query.q);
     }
@@ -584,10 +576,7 @@ export class SalesService {
     const merged = new Map<string, number>();
 
     for (const item of items) {
-      merged.set(
-        item.item_id,
-        (merged.get(item.item_id) ?? 0) + item.quantity,
-      );
+      merged.set(item.item_id, (merged.get(item.item_id) ?? 0) + item.quantity);
     }
 
     return [...merged.entries()]
