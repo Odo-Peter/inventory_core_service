@@ -1,6 +1,7 @@
 import { Prisma } from '../../generated/prisma/client.js';
 import type { StaffRole } from '../../generated/prisma/enums.js';
 import type { ItemModel } from '../../generated/prisma/models.js';
+import { ImageVariantUrlsDto } from './dto/item-image.dto.js';
 import type {
   ItemResponseDto,
   PriceHistoryResponseDto,
@@ -17,6 +18,7 @@ type PriceHistoryWithStaff = Prisma.PriceHistoryGetPayload<{
 export function toItemResponse(
   item: ItemModel,
   role: StaffRole,
+  image?: ImageVariantUrlsDto | null,
 ): ItemResponseDto {
   const response: ItemResponseDto = {
     id: item.id,
@@ -34,6 +36,8 @@ export function toItemResponse(
     created_at: item.created_at,
     updated_at: item.updated_at,
   };
+
+  if (image !== undefined) response.image = image;
 
   if (role === 'manager' || role === 'admin') {
     response.cost_price = item.cost_price;

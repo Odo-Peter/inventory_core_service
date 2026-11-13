@@ -7,14 +7,24 @@ export const ALLOWED_IMAGE_FORMATS = ['jpeg', 'png', 'webp'] as const;
 
 export type ImageVariant = 'thumb' | 'full';
 
-export const IMAGE_VARIANTS: Record<
-  ImageVariant,
-  { transformation: string }
-> = {
-  thumb: { transformation: 'c_fill,w_160,h_160,f_auto,q_auto' },
-  full: { transformation: 'c_limit,w_800,f_auto,q_auto' },
-};
-
+export const IMAGE_VARIANTS = {
+  thumb: {
+    transformation: [
+      {
+        crop: 'fill',
+        width: 160,
+        height: 160,
+        fetch_format: 'auto',
+        quality: 'auto',
+      },
+    ],
+  },
+  full: {
+    transformation: [
+      { crop: 'limit', width: 800, fetch_format: 'auto', quality: 'auto' },
+    ],
+  },
+} as const;
 export interface ImageStorage {
   readonly enabled: boolean;
   upload(key: string, data: Buffer, contentType: string): Promise<void>;

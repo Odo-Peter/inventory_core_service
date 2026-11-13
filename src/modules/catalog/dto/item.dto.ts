@@ -22,6 +22,7 @@ import { PaginationQueryDto } from '../../../common/pagination/pagination-query.
 import { PaginatedResponseDto } from '../../../common/pagination/paginated-response.dto.js';
 import { toBoolean } from '../../../common/validation/transformers.js';
 import { ITEM_UNITS, ItemUnit } from '../item-unit.enum.js';
+import { ImageVariantUrlsDto } from './item-image.dto.js';
 
 const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
@@ -141,6 +142,12 @@ export class ListItemsQueryDto extends PaginationQueryDto {
   @Transform(toBoolean)
   @IsBoolean()
   low_stock?: boolean;
+
+  @ApiPropertyOptional({ description: 'Include image variant URLs as `image`' })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  include_image_urls?: boolean;
 }
 
 export class ItemResponseDto {
@@ -158,6 +165,9 @@ export class ItemResponseDto {
 
   @ApiPropertyOptional({ nullable: true })
   image_key: string | null;
+
+  @ApiPropertyOptional({ type: ImageVariantUrlsDto, nullable: true })
+  image?: ImageVariantUrlsDto | null;
 
   @ApiProperty()
   name: string;
