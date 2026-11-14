@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
+import { CLOCK, type Clock } from '../../common/clock.js';
 import { AppException } from '../../common/errors/app.exception.js';
 import {
   buildPageMeta,
@@ -7,7 +8,14 @@ import {
   DEFAULT_PAGE_SIZE,
   toSkipTake,
 } from '../../common/pagination/pagination.js';
+import {
+  addDaysToDate,
+  dateInTimeZone,
+  startOfDayInTimeZone,
+  startOfNextDayInTimeZone,
+} from '../../common/timezone.js';
 import { Prisma } from '../../generated/prisma/client.js';
+import type { PaymentMethod } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { AUDIT_ACTIONS } from '../audit/audit-actions.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -24,6 +32,7 @@ import type {
   SaleListItemDto,
   SaleListResponseDto,
   SaleResponseDto,
+  SalesOverviewResponseDto,
   SalesSummaryResponseDto,
 } from './dto/sale.dto.js';
 import {
@@ -78,12 +87,25 @@ interface ReceiptPrintResult {
   is_copy: boolean;
 }
 
+interface OverviewDailyRow {
+  day: string;
+  total: string | number | bigint;
+  count: string | number;
+}
+
+interface OverviewPaymentMethodRow {
+  method: PaymentMethod;
+  total: string | number | bigint;
+  count: string | number;
+}
+
 @Injectable()
 export class SalesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly stock: StockService,
+    @Inject(CLOCK) private readonly clock: Clock,
   ) {}
 
   async create(
@@ -353,6 +375,93 @@ export class SalesService {
           amount: group._sum.amount ?? 0,
         }))
         .sort((a, b) => a.method.localeCompare(b.method)),
+    };
+  }
+
+  async overview(
+    principal: Principal,
+  ): Promise<SalesOverviewResponseDto> {
+    const store = await this.prisma.store.findFirst({
+      where: { id: principal.store_id },
+      select: { timezone: true },
+    });
+
+    if (!store) {
+      throw new AppException(404, 'store_not_found', 'Store not found');
+    }
+
+    const timezone = store.timezone;
+    const todayDate = dateInTimeZone(this.clock.now(), timezone);
+    const dates = Array.from({ length: 7 }, (_, index) =>
+      addDaysToDate(todayDate, index - 6),
+    );
+    const windowStart = startOfDayInTimeZone(dates[0], timezone);
+    const todayStart = startOfDayInTimeZone(todayDate, timezone);
+    const tomorrowStart = startOfNextDayInTimeZone(todayDate, timezone);
+    const scopedToStaff = principal.role === 'cashier';
+    const staffFilter = scopedToStaff
+      ? Prisma.sql`AND s."staff_id" = ${principal.staff_id}`
+      : Prisma.empty;
+
+    const [dailyRows, methodRows] = await this.prisma.$transaction([
+      this.prisma.$queryRaw<OverviewDailyRow[]>(Prisma.sql`
+        SELECT to_char(
+                 date_trunc(
+                   'day',
+                   (s."created_at" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}
+                 ),
+                 'YYYY-MM-DD'
+               ) AS day,
+               COALESCE(SUM(s."total"), 0)::bigint AS total,
+               COUNT(*)::int AS count
+        FROM "Sale" s
+        WHERE s."store_id" = ${principal.store_id}
+          AND s."created_at" >= ${windowStart}
+          ${staffFilter}
+        GROUP BY day
+        ORDER BY day ASC
+      `),
+      this.prisma.$queryRaw<OverviewPaymentMethodRow[]>(Prisma.sql`
+        SELECT p."method" AS method,
+               COALESCE(SUM(p."amount"), 0)::bigint AS total,
+               COUNT(*)::int AS count
+        FROM "Payment" p
+        JOIN "Sale" s ON s."id" = p."sale_id"
+        WHERE s."store_id" = ${principal.store_id}
+          AND s."created_at" >= ${todayStart}
+          AND s."created_at" < ${tomorrowStart}
+          ${staffFilter}
+        GROUP BY p."method"
+        ORDER BY p."method" ASC
+      `),
+    ]);
+
+    const rowsByDate = new Map(dailyRows.map((row) => [row.day, row]));
+    const daily = dates.map((date) => {
+      const row = rowsByDate.get(date);
+
+      return {
+        date,
+        total: row ? Number(row.total) : 0,
+        count: row ? Number(row.count) : 0,
+      };
+    });
+    const today = daily[daily.length - 1];
+
+    return {
+      timezone,
+      scope: scopedToStaff ? 'own' : 'store',
+      today: {
+        ...today,
+        by_method: methodRows
+          .map((row) => ({
+            method: row.method,
+            total: Number(row.total),
+            count: Number(row.count),
+          }))
+          .sort((left, right) => left.method.localeCompare(right.method)),
+      },
+      daily,
     };
   }
 

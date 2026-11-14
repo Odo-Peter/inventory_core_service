@@ -39,6 +39,10 @@ import {
   SaleListResponseDto,
   SalePaymentResponseDto,
   SaleResponseDto,
+  SalesOverviewDayDto,
+  SalesOverviewPaymentMethodDto,
+  SalesOverviewResponseDto,
+  SalesOverviewTodayDto,
   SalesSummaryPaymentMethodDto,
   SalesSummaryResponseDto,
 } from './dto/sale.dto.js';
@@ -53,6 +57,9 @@ import { SalesService } from './sales.service.js';
   ReceiptStoreDto,
   PaymentAccountOptionDto,
   PaymentMethodOptionDto,
+  SalesOverviewDayDto,
+  SalesOverviewPaymentMethodDto,
+  SalesOverviewTodayDto,
   SalesSummaryPaymentMethodDto,
 )
 @Controller('sales')
@@ -89,6 +96,16 @@ export class SalesController {
     @Query() query: ListSalesQueryDto,
   ): Promise<SalesSummaryResponseDto> {
     return this.salesService.summary(principal, query);
+  }
+
+  @Roles('cashier')
+  @Get('overview')
+  @ApiOperation({ summary: 'Get the dashboard sales overview' })
+  @ApiOkResponse({ type: SalesOverviewResponseDto })
+  overview(
+    @CurrentPrincipal() principal: Principal,
+  ): Promise<SalesOverviewResponseDto> {
+    return this.salesService.overview(principal);
   }
 
   @Roles('cashier')

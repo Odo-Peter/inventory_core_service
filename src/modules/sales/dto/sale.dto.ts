@@ -161,6 +161,47 @@ export class PaymentOptionsResponseDto {
   bank_transfer?: PaymentMethodOptionDto;
 }
 
+export class SalesOverviewDayDto {
+  @ApiProperty({ example: '2026-11-14' })
+  date: string;
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  count: number;
+}
+
+export class SalesOverviewPaymentMethodDto {
+  @ApiProperty({ enum: PaymentMethod })
+  method: PaymentMethod;
+
+  @ApiProperty()
+  total: number;
+
+  @ApiProperty()
+  count: number;
+}
+
+export class SalesOverviewTodayDto extends SalesOverviewDayDto {
+  @ApiProperty({ type: () => [SalesOverviewPaymentMethodDto] })
+  by_method: SalesOverviewPaymentMethodDto[];
+}
+
+export class SalesOverviewResponseDto {
+  @ApiProperty({ example: 'Africa/Lagos' })
+  timezone: string;
+
+  @ApiProperty({ enum: ['own', 'store'] })
+  scope: 'own' | 'store';
+
+  @ApiProperty({ type: () => SalesOverviewTodayDto })
+  today: SalesOverviewTodayDto;
+
+  @ApiProperty({ type: () => [SalesOverviewDayDto] })
+  daily: SalesOverviewDayDto[];
+}
+
 export class SalesSummaryPaymentMethodDto {
   @ApiProperty({ enum: PaymentMethod })
   method: PaymentMethod;

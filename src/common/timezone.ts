@@ -57,6 +57,35 @@ function timeZoneOffsetMs(date: Date, timeZone: string): number {
   return asUtc - date.getTime();
 }
 
+export function dateInTimeZone(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const values: Record<string, string> = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') {
+      values[part.type] = part.value;
+    }
+  }
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function addDaysToDate(date: string, days: number): string {
+  const { year, month, day } = assertDate(date);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+
+  return [
+    shifted.getUTCFullYear(),
+    String(shifted.getUTCMonth() + 1).padStart(2, '0'),
+    String(shifted.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 export function startOfDayInTimeZone(date: string, timeZone: string): Date {
   const { year, month, day } = assertDate(date);
   const utcGuess = new Date(Date.UTC(year, month - 1, day));
