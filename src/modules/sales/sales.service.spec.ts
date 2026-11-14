@@ -129,6 +129,14 @@ function createHarness(options: {
   accounts?: Array<{ id: string; label: string; type: string }>;
   aggregate?: unknown;
   groups?: unknown[];
+  clockDate?: Date;
+  storeTimezone?: string;
+  dailyRows?: Array<{ day: string; total: string | number; count: number }>;
+  methodRows?: Array<{
+    method: PaymentMethod;
+    total: string | number;
+    count: number;
+  }>;
 } = {}) {
   const shiftFindFirst = vi
     .fn()
@@ -205,10 +213,16 @@ function createHarness(options: {
     phone: '+2348012345678',
     currency: 'NGN',
     receipt_footer: 'Thank you',
+    timezone: options.storeTimezone ?? 'Africa/Lagos',
   });
+  const prismaQueryRaw = vi
+    .fn()
+    .mockResolvedValueOnce(options.dailyRows ?? [])
+    .mockResolvedValueOnce(options.methodRows ?? []);
 
   const prisma = {
     $transaction: transaction,
+    $queryRaw: prismaQueryRaw,
     sale: {
       findUnique: saleFindUnique,
       findFirst: saleFindFirst,
@@ -236,11 +250,13 @@ function createHarness(options: {
     });
   }
   const auditRecord = vi.fn().mockResolvedValue(undefined);
+  const clockDate = options.clockDate ?? new Date('2026-11-14T12:00:00.000Z');
 
   const service = new SalesService(
     prisma,
     { record: auditRecord } as unknown as AuditService,
     { applyMovementInTx } as unknown as StockService,
+    { now: () => clockDate },
   );
 
   return {
@@ -249,6 +265,7 @@ function createHarness(options: {
     transaction,
     shiftFindFirst,
     queryRaw,
+    prismaQueryRaw,
     storeUpdate,
     saleCreate,
     saleFindUnique,
@@ -850,6 +867,76 @@ describe('SalesService reads', () => {
         { method: 'cash', count: 2, amount: 7_000 },
       ],
     });
+  });
+});
+
+describe('SalesService.overview', () => {
+  it('returns seven oldest-first days, fills gaps and maps today by method', async () => {
+    const harness = createHarness({
+      clockDate: new Date('2026-11-14T12:00:00.000Z'),
+      storeTimezone: 'Africa/Lagos',
+      dailyRows: [
+        { day: '2026-11-12', total: '4500', count: 2 },
+        { day: '2026-11-14', total: '7000', count: 3 },
+      ],
+      methodRows: [
+        { method: 'card', total: '2000', count: 1 },
+        { method: 'cash', total: '5000', count: 2 },
+      ],
+    });
+
+    const result = await harness.service.overview(MANAGER);
+
+    expect(harness.storeFindFirst).toHaveBeenCalledWith({
+      where: { id: STORE_ID },
+      select: { timezone: true },
+    });
+    expect(harness.transaction).toHaveBeenCalledTimes(1);
+    expect(harness.prismaQueryRaw).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({
+      timezone: 'Africa/Lagos',
+      scope: 'store',
+      today: {
+        date: '2026-11-14',
+        total: 7000,
+        count: 3,
+        by_method: [
+          { method: 'card', total: 2000, count: 1 },
+          { method: 'cash', total: 5000, count: 2 },
+        ],
+      },
+      daily: [
+        { date: '2026-11-08', total: 0, count: 0 },
+        { date: '2026-11-09', total: 0, count: 0 },
+        { date: '2026-11-10', total: 0, count: 0 },
+        { date: '2026-11-11', total: 0, count: 0 },
+        { date: '2026-11-12', total: 4500, count: 2 },
+        { date: '2026-11-13', total: 0, count: 0 },
+        { date: '2026-11-14', total: 7000, count: 3 },
+      ],
+    });
+  });
+
+  it('scopes cashiers to their own sales and managers to the store', async () => {
+    const cashier = createHarness();
+    const cashierResult = await cashier.service.overview(PRINCIPAL);
+
+    expect(cashierResult.scope).toBe('own');
+    const cashierDailySql = cashier.prismaQueryRaw.mock.calls[0][0] as {
+      values: unknown[];
+    };
+    expect(cashierDailySql.values).toEqual(
+      expect.arrayContaining([STORE_ID, STAFF_ID]),
+    );
+
+    const manager = createHarness();
+    const managerResult = await manager.service.overview(MANAGER);
+
+    expect(managerResult.scope).toBe('store');
+    const managerDailySql = manager.prismaQueryRaw.mock.calls[0][0] as {
+      values: unknown[];
+    };
+    expect(managerDailySql.values).not.toContain(STAFF_ID);
   });
 });
 

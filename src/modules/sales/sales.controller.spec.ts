@@ -21,6 +21,7 @@ function buildController() {
     list: vi.fn().mockResolvedValue({ data: [], meta: {} }),
     findOne: vi.fn().mockResolvedValue({ id: SALE_ID }),
     summary: vi.fn().mockResolvedValue({}),
+    overview: vi.fn().mockResolvedValue({}),
     paymentOptions: vi.fn().mockResolvedValue({}),
     printReceipt: vi.fn().mockResolvedValue({}),
   };
@@ -41,6 +42,7 @@ describe('SalesController', () => {
     await controller.list(PRINCIPAL, query);
     await controller.findOne(PRINCIPAL, SALE_ID);
     await controller.summary(PRINCIPAL, query);
+    await controller.overview(PRINCIPAL);
     await controller.paymentOptions(PRINCIPAL);
     await controller.printReceipt(PRINCIPAL, SALE_ID);
 
@@ -48,6 +50,7 @@ describe('SalesController', () => {
     expect(service.list).toHaveBeenCalledWith(PRINCIPAL, query);
     expect(service.findOne).toHaveBeenCalledWith(PRINCIPAL, SALE_ID);
     expect(service.summary).toHaveBeenCalledWith(PRINCIPAL, query);
+    expect(service.overview).toHaveBeenCalledWith(PRINCIPAL);
     expect(service.paymentOptions).toHaveBeenCalledWith(PRINCIPAL);
     expect(service.printReceipt).toHaveBeenCalledWith(PRINCIPAL, SALE_ID);
   });
