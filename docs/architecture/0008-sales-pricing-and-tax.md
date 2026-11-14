@@ -43,6 +43,8 @@ for this phase:
   No tax-inclusive/exclusive setting was invented.
 - Discounts, promotions, COGS, and refunds/voids remain out of scope.
 - Money stays integer minor units (kobo) as agreed.
+- The seven-day dashboard aggregate (`GET /api/v1/sales/overview`) groups
+  completed sales by business day in the store's configured timezone, not UTC.
 
 See `docs/data-model/phase-03-sale-cart.md` and
 `docs/data-model/phase-04-05-payments-receipts.md` for the field-level
