@@ -1900,6 +1900,15 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "include_image_urls",
+            "required": false,
+            "in": "query",
+            "description": "Include image variant URLs as `image`",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -3224,6 +3233,15 @@
             }
           },
           {
+            "name": "sale_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "shift_id",
             "required": false,
             "in": "query",
@@ -3377,6 +3395,15 @@
             }
           },
           {
+            "name": "sale_id",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
             "name": "shift_id",
             "required": false,
             "in": "query",
@@ -3427,6 +3454,33 @@
           }
         ],
         "summary": "Summarise sales in a date range or shift",
+        "tags": [
+          "Sales"
+        ]
+      }
+    },
+    "/api/v1/sales/overview": {
+      "get": {
+        "operationId": "SalesController_overview_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesOverviewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get the dashboard sales overview",
         "tags": [
           "Sales"
         ]
@@ -4184,6 +4238,21 @@
           }
         }
       },
+      "ImageVariantUrlsDto": {
+        "type": "object",
+        "properties": {
+          "thumb": {
+            "type": "string"
+          },
+          "full": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "thumb",
+          "full"
+        ]
+      },
       "ItemResponseDto": {
         "type": "object",
         "properties": {
@@ -4203,6 +4272,15 @@
           "image_key": {
             "type": "object",
             "nullable": true
+          },
+          "image": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ImageVariantUrlsDto"
+              }
+            ]
           },
           "name": {
             "type": "string"
@@ -4425,21 +4503,6 @@
         },
         "required": [
           "new_price"
-        ]
-      },
-      "ImageVariantUrlsDto": {
-        "type": "object",
-        "properties": {
-          "thumb": {
-            "type": "string"
-          },
-          "full": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "thumb",
-          "full"
         ]
       },
       "ItemImageResponseDto": {
@@ -4984,6 +5047,77 @@
           "accounts"
         ]
       },
+      "SalesOverviewDayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-11-14"
+          },
+          "total": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "date",
+          "total",
+          "count"
+        ]
+      },
+      "SalesOverviewPaymentMethodDto": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "card",
+              "bank_transfer"
+            ]
+          },
+          "total": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "method",
+          "total",
+          "count"
+        ]
+      },
+      "SalesOverviewTodayDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-11-14"
+          },
+          "total": {
+            "type": "number"
+          },
+          "count": {
+            "type": "number"
+          },
+          "by_method": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesOverviewPaymentMethodDto"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "total",
+          "count",
+          "by_method"
+        ]
+      },
       "SalesSummaryPaymentMethodDto": {
         "type": "object",
         "properties": {
@@ -5170,6 +5304,37 @@
           "tax_total",
           "total",
           "by_payment_method"
+        ]
+      },
+      "SalesOverviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "example": "Africa/Lagos"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "own",
+              "store"
+            ]
+          },
+          "today": {
+            "$ref": "#/components/schemas/SalesOverviewTodayDto"
+          },
+          "daily": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesOverviewDayDto"
+            }
+          }
+        },
+        "required": [
+          "timezone",
+          "scope",
+          "today",
+          "daily"
         ]
       },
       "SaleListItemDto": {

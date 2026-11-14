@@ -1,8 +1,8 @@
 # Endpoint and role access map
 
-Generated from `docs/api/openapi.json` (file modified 2026-11-08T15:39:28.377Z, newer than the latest controller change) and the global auth/roles guards; role map generated 2026-11-08T17:14:27.812Z.
+Generated from `docs/api/openapi.json` (file modified 2026-11-14T15:26:33.699Z, newer than the latest controller change) and the global auth/roles guards; role map generated 2026-11-14T15:27:11.850Z.
 
-**Endpoint count:** 59 operations in this map and 59 operations in `openapi.json`.
+**Endpoint count:** 60 operations in this map and 60 operations in `openapi.json`.
 
 ## 1. Role model
 
@@ -143,6 +143,7 @@ Roles: `cashier`, `manager`, `admin`.
 | GET | `/api/v1/sales` | cashier | cashier, manager, admin | Bearer | List completed sales | cashier sees own sales only; manager/admin see the whole store and may filter staff_id. |
 | GET | `/api/v1/sales/payment-options` | cashier | cashier, manager, admin | Bearer | List enabled payment methods and accounts | card and bank_transfer are omitted when no active account exists. |
 | GET | `/api/v1/sales/summary` | cashier | cashier, manager, admin | Bearer | Summarise sales in a date range or shift | cashier summary is scoped to own sales only. |
+| GET | `/api/v1/sales/overview` | cashier | cashier, manager, admin | Bearer | Get the dashboard sales overview | cashier sees own sales only; manager/admin see the whole store. Local days use the store timezone. |
 | GET | `/api/v1/sales/{id}` | cashier | cashier, manager, admin | Bearer | Get a completed sale | cashier gets 404 sale_not_found for another cashier sale. |
 | POST | `/api/v1/sales/{id}/receipt-prints` | cashier | cashier, manager, admin | Bearer | Record a receipt print or reprint | cashier can print own sales only; first print is_copy=false, later prints is_copy=true. |
 
@@ -156,6 +157,7 @@ Roles: `cashier`, `manager`, `admin`.
 | `PATCH /items/{id}` | manager | Changing active is rejected with 403 forbidden; admins may change active. Different active value triggers the check. | `src/modules/catalog/items.service.ts:264-270` |
 | `GET /sales` | cashier | List is forced to the caller staff_id. Managers/admins see all store sales and may filter by staff_id. | `src/modules/sales/sales.service.ts:533-537` |
 | `GET /sales/summary` | cashier | Summary aggregates only the caller own sales. Managers/admins aggregate the whole store. | `src/modules/sales/sales.service.ts:533-537` |
+| `GET /sales/overview` | cashier | Overview aggregates only the caller own sales. Managers/admins aggregate the whole store. Local days use the store timezone. | `src/modules/sales/sales.service.ts:381-466` |
 | `GET /sales/{id}` | cashier | A sale owned by another cashier is returned as 404 sale_not_found. Managers/admins can read any store sale. | `src/modules/sales/sales.service.ts:479-481` |
 | `POST /sales/{id}/receipt-prints` | cashier | Printing another cashier sale is returned as 404 sale_not_found. Managers/admins can print any store sale. | `src/modules/sales/sales.service.ts:479-481` |
 | `POST /shifts/clock-in` | admin | Denied with 403 forbidden by @DenyRoles and the service guard; cashier and manager may clock in. | `src/modules/shifts/shifts.controller.ts:41-44; src/modules/shifts/shifts.service.ts:356-362` |
@@ -171,7 +173,7 @@ Confirmed examples:
 
 - `cost_price` is hidden for cashiers and included for managers/admins in every item response (`src/modules/catalog/item.mapper.ts:41-43`).
 - `PATCH /items/:id` changing `active` requires admin even though the route's minimum role is manager (`src/modules/catalog/items.service.ts:264-270`).
-- Sales history, summaries, detail and receipt printing are scoped to the cashier's own sales; managers/admins see the store (`src/modules/sales/sales.service.ts:479-481, 533-537`).
+- Sales history, summaries, overview, detail and receipt printing are scoped to the cashier's own sales; managers/admins see the store (`src/modules/sales/sales.service.ts:479-481, 533-537`).
 - Staff: managers may reset PIN or unlock cashiers only; admins may act on other staff; self-service is blocked for these actions. Deactivation protects the last active admin.
 - Shifts: managers may force-close cashier shifts only; admins may force-close any open shift but cannot clock in/out.
 - Audit: route-level admin only; no per-record role filtering.

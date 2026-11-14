@@ -1,6 +1,6 @@
 # Sales API contract
 
-Generated from the running NestJS app and the sales/catalog source on 2026-11-08.
+Generated from the running NestJS app and the sales/catalog source on 2026-11-14.
 Machine-readable schema: [`openapi.json`](./openapi.json) (the app's `GET /docs-json` response).
 
 ## Conventions
@@ -189,6 +189,54 @@ Summarise sales matching the same filters as the list endpoint. `200 OK`.
   "by_payment_method": [
     { "method": "card", "count": 1, "amount": 1000 },
     { "method": "cash", "count": 1, "amount": 2250 }
+  ]
+}
+```
+
+## GET /api/v1/sales/overview
+
+Seven-day dashboard aggregate ending today. `200 OK`. No query parameters.
+
+Day boundaries use the store's configured IANA timezone, read from `Store.timezone`. `daily` always has exactly seven entries, oldest first, ending with today in that timezone; days without sales are zero-filled. `today` repeats the last `daily` entry and adds `by_method`. Cashiers see only their own sales (`scope: own`); managers and admins see all sales in the store (`scope: store`).
+
+### Response — `SalesOverviewResponseDto`
+
+| Field      | Type                              | Nullable | Notes                                                          |
+| ---------- | --------------------------------- | -------- | -------------------------------------------------------------- |
+| `timezone` | string                            | no       | Store IANA timezone used for day boundaries, e.g. `Africa/Lagos`. |
+| `scope`    | enum                              | no       | `own` for cashiers, `store` for managers and admins.           |
+| `today`    | `SalesOverviewTodayDto`           | no       | Today in the store timezone.                                   |
+| `daily`    | `SalesOverviewDayDto[]`           | no       | Exactly 7 entries, oldest first, ending today.                 |
+
+`SalesOverviewDayDto`: `date` (`YYYY-MM-DD`), `total` (integer kobo), `count` (integer). All non-null.
+
+`SalesOverviewTodayDto`: same fields as `SalesOverviewDayDto`, plus `by_method` (`SalesOverviewPaymentMethodDto[]`). `by_method` lists only payment methods present in today's sales, sorted by `method`; the entries sum to `today.total` and `today.count`.
+
+`SalesOverviewPaymentMethodDto`: `method` (enum), `total` (integer kobo), `count` (integer). All non-null.
+
+### Example (cashier scope; all values are integer kobo)
+
+```json
+{
+  "timezone": "Africa/Lagos",
+  "scope": "own",
+  "today": {
+    "date": "2026-11-14",
+    "total": 3250,
+    "count": 2,
+    "by_method": [
+      { "method": "card", "total": 1000, "count": 1 },
+      { "method": "cash", "total": 2250, "count": 1 }
+    ]
+  },
+  "daily": [
+    { "date": "2026-11-08", "total": 0, "count": 0 },
+    { "date": "2026-11-09", "total": 0, "count": 0 },
+    { "date": "2026-11-10", "total": 0, "count": 0 },
+    { "date": "2026-11-11", "total": 0, "count": 0 },
+    { "date": "2026-11-12", "total": 0, "count": 0 },
+    { "date": "2026-11-13", "total": 0, "count": 0 },
+    { "date": "2026-11-14", "total": 3250, "count": 2 }
   ]
 }
 ```
@@ -388,7 +436,8 @@ Record a receipt print and return the data needed to render it. `200 OK`. No req
 ## UI behaviour guarantees
 
 - **Idempotent replay:** sending a previously used `idempotency_key` returns the original sale with `201` (same sale `id`, original totals/items), even if the new request body differs. The replay is resolved before shift and stock checks. A key owned by another staff member returns `409 idempotency_key_reused`.
-- **Cashier history:** cashiers only see their own sales in `GET /sales`, `GET /sales/summary`, `GET /sales/:id`, and `POST /sales/:id/receipt-prints`. A cashier requesting another cashier's sale gets `404 sale_not_found`; `staff_id` cannot widen a cashier's scope. Managers and admins see all sales in their store.
+- **Cashier history:** cashiers only see their own sales in `GET /sales`, `GET /sales/summary`, `GET /sales/overview`, `GET /sales/:id`, and `POST /sales/:id/receipt-prints`. A cashier requesting another cashier's sale gets `404 sale_not_found`; `staff_id` cannot widen a cashier's scope. Managers and admins see all sales in their store.
+- **Overview days:** `GET /sales/overview` uses the store timezone for business-day boundaries, not UTC. `daily` always contains seven consecutive zero-filled days ending today, and `today` matches the final entry.
 - **Reprints:** the first print returns `is_copy: false`; every later print returns `is_copy: true` with an incremented `print_number`. Only reprints are audit-logged.
 - **Payment options:** `payment-options` omits `card` when there is no active POS terminal and omits `bank_transfer` when there is no active bank account. `cash` is always present with an empty `accounts` array. Inactive and other-store accounts never appear and cannot be used in a sale.
 

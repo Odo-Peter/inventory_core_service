@@ -1,13 +1,13 @@
 {
-  "generated_at": "2026-11-08T17:14:27.812Z",
+  "generated_at": "2026-11-14T15:27:11.850Z",
   "roles": [
     "cashier",
     "manager",
     "admin"
   ],
   "hierarchy": "inclusive",
-  "endpointCount": 59,
-  "openapiOperationCount": 59,
+  "endpointCount": 60,
+  "openapiOperationCount": 60,
   "endpoints": [
     {
       "method": "GET",
@@ -754,6 +754,20 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/sales/overview",
+      "tag": "Sales",
+      "minRole": "cashier",
+      "effectiveRoles": [
+        "cashier",
+        "manager",
+        "admin"
+      ],
+      "public": false,
+      "summary": "Get the dashboard sales overview",
+      "notes": "cashier sees own sales only; manager/admin see the whole store. Local days use the store timezone."
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/sales/{id}",
       "tag": "Sales",
       "minRole": "cashier",
@@ -817,6 +831,12 @@
       "role": "cashier",
       "behavior": "Summary aggregates only the caller own sales. Managers/admins aggregate the whole store.",
       "source": "src/modules/sales/sales.service.ts:533-537"
+    },
+    {
+      "endpoint": "GET /sales/overview",
+      "role": "cashier",
+      "behavior": "Overview aggregates only the caller own sales. Managers/admins aggregate the whole store. Local days use the store timezone.",
+      "source": "src/modules/sales/sales.service.ts:381-466"
     },
     {
       "endpoint": "GET /sales/{id}",

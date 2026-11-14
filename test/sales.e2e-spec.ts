@@ -870,6 +870,7 @@ describe('Sales (e2e)', () => {
     expect(paths['/api/v1/sales'].get).toBeDefined();
     expect(paths['/api/v1/sales/payment-options'].get).toBeDefined();
     expect(paths['/api/v1/sales/summary'].get).toBeDefined();
+    expect(paths['/api/v1/sales/overview'].get).toBeDefined();
     expect(paths['/api/v1/sales/{id}'].get).toBeDefined();
     expect(paths['/api/v1/sales/{id}/receipt-prints'].post).toBeDefined();
 
@@ -884,6 +885,10 @@ describe('Sales (e2e)', () => {
       'PaymentOptionsResponseDto',
       'PaymentMethodOptionDto',
       'SalesSummaryResponseDto',
+      'SalesOverviewResponseDto',
+      'SalesOverviewTodayDto',
+      'SalesOverviewDayDto',
+      'SalesOverviewPaymentMethodDto',
       'ReceiptResponseDto',
       'ReceiptStoreDto',
     ]) {
